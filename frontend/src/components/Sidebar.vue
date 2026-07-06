@@ -46,23 +46,7 @@ const toggleSidebar = () => {
     </div>
 
     <nav class="p-4 space-y-6">
-      <!-- Tableau de bord -->
-      <div>
-        <h2
-          v-if="!collapsed"
-          class="text-xs uppercase text-red-200 mb-2"
-        >
-          Tableau de bord
-        </h2>
-
-        <SidebarItem
-          to="/home"
-          icon="dashboard"
-          label="Dashboard"
-          :collapsed="collapsed"
-        />
-      </div>
-
+     
       <!-- RH -->
       <div>
         <h2
@@ -111,22 +95,6 @@ const toggleSidebar = () => {
         />
       </div>
 
-      <!-- Projets -->
-      <div>
-        <h2
-          v-if="!collapsed"
-          class="text-xs uppercase text-red-200 mb-2"
-        >
-          Projets
-        </h2>
-
-        <SidebarItem
-          to="/projects"
-          icon="folder"
-          label="Projets"
-          :collapsed="collapsed"
-        />
-      </div>
 
       <!-- Stock -->
       <div>
@@ -176,36 +144,7 @@ const toggleSidebar = () => {
         />
       </div>
 
-      <!-- Administration -->
-      <div>
-        <h2
-          v-if="!collapsed"
-          class="text-xs uppercase text-red-200 mb-2"
-        >
-          Administration
-        </h2>
-
-        <SidebarItem
-          to="/users"
-          icon="person"
-          label="Utilisateurs"
-          :collapsed="collapsed"
-        />
-
-        <SidebarItem
-          to="/roles"
-          icon="vpn_key"
-          label="Rôles"
-          :collapsed="collapsed"
-        />
-
-        <SidebarItem
-          to="/permissions"
-          icon="shield"
-          label="Permissions"
-          :collapsed="collapsed"
-        />
-      </div>
+      
     </nav>
   </aside>
 </template>
