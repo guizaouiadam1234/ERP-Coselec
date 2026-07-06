@@ -150,6 +150,13 @@ const toggleSidebar = () => {
           label="Mouvements"
           :collapsed="collapsed"
         />
+
+        <SidebarItem
+          to="/stock/canvas"
+          icon="view_kanban"
+          label="Canvas"
+          :collapsed="collapsed"
+        />
       </div>
 
       <!-- Documents -->

@@ -28,7 +28,11 @@ const routes = [
   {
     path: "/stock",
     component: () => import("../views/Stock/StockOverviewView.vue")
-  }
+  },
+  {
+    path: "/stock/canvas",
+    component: () => import("../views/Stock/StockCanvasView.vue")
+  },
 
 ];
 
