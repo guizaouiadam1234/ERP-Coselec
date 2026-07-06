@@ -40,5 +40,8 @@ export const StockService = {
       quantity: payload.quantity,
       partner_id: payload.partner_id
     });
+  },
+  getStockOverview(){
+    return api.get('/stocks');
   }
 };

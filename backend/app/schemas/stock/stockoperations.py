@@ -1,17 +1,18 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class StockEntry(BaseModel):
     product_id: int
     warehouse_id: int
-    partner_id: int
+    partner_id: Optional[int] = None
     quantity: int
 
 
 class StockExit(BaseModel):
     product_id: int
     warehouse_id: int
-    partner_id: int
+    partner_id: Optional[int] = None
     quantity: int
 
 

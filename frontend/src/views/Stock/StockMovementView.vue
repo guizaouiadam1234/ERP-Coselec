@@ -1,5 +1,6 @@
 <template>
-  <div class="p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans">
+  <AppLayout>
+  <div class="max-w-7xl mx-auto font-sans">
     
     <!-- Header -->
     <div class="flex items-center space-x-3 border-b border-gray-200 pb-5 mb-6 bg-white p-4 rounded-xl shadow-xs">
@@ -101,7 +102,7 @@
             <div v-if="!isInternalMovement">
               <select v-model="form.partner_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-sm text-gray-800 focus:outline-none focus:border-red-500 cursor-pointer">
                 <option value="" disabled>Choisir l'entreprise partenaire...</option>
-                <option v-for="part in partners" :key="part.id" :value="part.id">{{ part.name }}</option>
+                <option v-for="part in displayedPartners" :key="part.id" :value="part.id">{{ part.name }}</option>
               </select>
             </div>
           </div>
@@ -196,11 +197,13 @@
 
     </div>
   </div>
+  </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { StockService } from '@/services/stock';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 type MovementType = 'ENTRY' | 'EXIT';
 
@@ -259,6 +262,26 @@ const warehouses = ref<Warehouse[]>([]);
 const partners = ref<Partner[]>([]);
 const movements = ref<Movement[]>([]);
 
+const isInternalPartner = (partner: Partner | undefined) => {
+  if (!partner) {
+    return false;
+  }
+
+  const name = (partner.name || '').toLowerCase();
+  const code = (partner.code || '').toLowerCase();
+
+  return (
+    name.includes('coselec') ||
+    code.includes('coselec') ||
+    code === 'internal' ||
+    code === 'int'
+  );
+};
+
+const displayedPartners = computed(() => {
+  return partners.value.filter((partner) => !isInternalPartner(partner));
+});
+
 const productsById = computed(() => {
   const map = new Map<number, Product>();
 
@@ -283,17 +306,7 @@ const warehousesById = computed(() => {
 const selectedCategoryId = ref('');
 
 const getInternalPartnerId = () => {
-  const internalPartner = partners.value.find((partner) => {
-    const name = (partner.name || '').toLowerCase();
-    const code = (partner.code || '').toLowerCase();
-
-    return (
-      name.includes('coselec') ||
-      code.includes('coselec') ||
-      code === 'internal' ||
-      code === 'int'
-    );
-  });
+  const internalPartner = partners.value.find((partner) => isInternalPartner(partner));
 
   return internalPartner?.id;
 };
@@ -384,13 +397,8 @@ const submitMovement = async () => {
   }
 
   const resolvedPartnerId = isInternalMovement.value
-    ? getInternalPartnerId()
+    ? (getInternalPartnerId() ?? null)
     : Number(form.partner_id);
-
-  if (!resolvedPartnerId) {
-    alert("Aucun partenaire interne COSELEC n'a été trouvé. Créez un partenaire COSELEC puis réessayez.");
-    return;
-  }
 
   try {
     const payload = {

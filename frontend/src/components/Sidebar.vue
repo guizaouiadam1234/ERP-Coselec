@@ -128,6 +128,30 @@ const toggleSidebar = () => {
         />
       </div>
 
+      <!-- Stock -->
+      <div>
+        <h2
+          v-if="!collapsed"
+          class="text-xs uppercase text-red-200 mb-2"
+        >
+          Stock
+        </h2>
+
+        <SidebarItem
+          to="/stock"
+          icon="inventory_2"
+          label="Vue d'ensemble"
+          :collapsed="collapsed"
+        />
+
+        <SidebarItem
+          to="/stock/movement"
+          icon="sync_alt"
+          label="Mouvements"
+          :collapsed="collapsed"
+        />
+      </div>
+
       <!-- Documents -->
       <div>
         <h2

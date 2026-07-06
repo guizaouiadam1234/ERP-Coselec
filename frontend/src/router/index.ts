@@ -24,6 +24,10 @@ const routes = [
   {
     path: "/stock/movement",
     component: () => import("../views/Stock/StockMovementView.vue")
+  },
+  {
+    path: "/stock",
+    component: () => import("../views/Stock/StockOverviewView.vue")
   }
 
 ];

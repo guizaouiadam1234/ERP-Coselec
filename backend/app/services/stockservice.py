@@ -1,9 +1,59 @@
 from fastapi import HTTPException
 
+from app.models.stock.partner import Partner
 from app.models.stock.stock import Stock
 from app.models.stock.stockmovement import StockMovement
+from app.models.stock.warehouse import Warehouse
 
 from app.enums.movement_type import MovementType
+
+
+def get_or_create_internal_partner(db):
+    partners = db.query(Partner).all()
+
+    internal_partner = next(
+        (
+            partner for partner in partners
+            if (
+                (partner.name or "").strip().lower().find("coselec") != -1
+                or (partner.code or "").strip().lower() in {"coselec", "internal", "int", "coselec_internal"}
+            )
+        ),
+        None
+    )
+
+    if internal_partner:
+        return internal_partner
+
+    created_partner = Partner(
+        code="COSELEC_INTERNAL",
+        name="Coselec Interne"
+    )
+    db.add(created_partner)
+    db.flush()
+    return created_partner
+
+
+def resolve_partner_id(db, partner_id):
+    if partner_id:
+        return partner_id
+
+    return get_or_create_internal_partner(db).id
+
+
+def get_magasin_warehouse(db):
+    warehouses = db.query(Warehouse).all()
+
+    return next(
+        (
+            warehouse for warehouse in warehouses
+            if (
+                (warehouse.code or "").strip().upper() == "MAG"
+                or (warehouse.name or "").strip().lower() == "magasin"
+            )
+        ),
+        None
+    )
 
 
 def get_or_create_stock(
@@ -42,20 +92,44 @@ def stock_entry(
     partner_id,
     quantity
 ):
-
-    stock = get_or_create_stock(
+    resolved_partner_id = resolve_partner_id(
         db,
-        product_id,
-        warehouse_id,
         partner_id
     )
 
-    stock.quantity += quantity
+    internal_partner_id = get_or_create_internal_partner(db).id
+    magasin_warehouse = get_magasin_warehouse(db)
+
+    destination_stock = get_or_create_stock(
+        db,
+        product_id,
+        warehouse_id,
+        resolved_partner_id
+    )
+
+    if magasin_warehouse and warehouse_id != magasin_warehouse.id:
+        magasin_stock = get_or_create_stock(
+            db,
+            product_id,
+            magasin_warehouse.id,
+            internal_partner_id
+        )
+
+        if magasin_stock.quantity < quantity:
+            raise HTTPException(
+                status_code=400,
+                detail="Pas assez de stock dans le magasin"
+            )
+
+        magasin_stock.quantity -= quantity
+        destination_stock.quantity += quantity
+    else:
+        destination_stock.quantity += quantity
 
     movement = StockMovement(
         product_id=product_id,
         warehouse_id=warehouse_id,
-        partner_id=partner_id,
+        partner_id=resolved_partner_id,
         quantity=quantity,
         type=MovementType.ENTRY
     )
@@ -64,7 +138,7 @@ def stock_entry(
 
     db.commit()
 
-    return stock
+    return destination_stock
 
 def stock_exit(
     db,
@@ -73,11 +147,16 @@ def stock_exit(
     partner_id,
     quantity
 ):
+    resolved_partner_id = resolve_partner_id(
+        db,
+        partner_id
+    )
+
     stock = get_or_create_stock(
         db,
         product_id,
         warehouse_id,
-        partner_id
+        resolved_partner_id
     )
 
     if stock.quantity < quantity:
@@ -91,7 +170,7 @@ def stock_exit(
     movement = StockMovement(
         product_id=product_id,
         warehouse_id=warehouse_id,
-        partner_id=partner_id,
+        partner_id=resolved_partner_id,
         quantity=quantity,
         type=MovementType.EXIT
     )

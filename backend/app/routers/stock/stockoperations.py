@@ -37,19 +37,6 @@ def create_entry(
         payload.quantity
     )
 
-@router.post("/entry")
-def create_entry(
-    payload: StockEntry,
-    db: Session = Depends(get_db)
-):
-    return stock_entry(
-        db,
-        payload.product_id,
-        payload.warehouse_id,
-        payload.partner_id,
-        payload.quantity
-    )
-
 @router.post("/exit")
 def create_exit(
     payload: StockExit,
