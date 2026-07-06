@@ -17,6 +17,10 @@ class TicketCreate(TicketBase):
     pass
 
 
+class TicketStatusUpdate(BaseModel):
+    status: TicketStatus
+
+
 class TicketResponse(TicketBase):
     id: int
     status: TicketStatus

@@ -10,7 +10,15 @@
       </header>
 
       <div class="flex gap-8 items-start">
-        <div v-for="status in statuses" :key="status.value" class="flex-1 flex flex-col">
+        <div
+          v-for="status in statuses"
+          :key="status.value"
+          class="flex-1 flex flex-col rounded-xl border border-transparent p-3 transition"
+          :class="dropTargetStatus === status.value ? 'border-red-200 bg-red-50/50' : ''"
+          @dragover.prevent="onDragOver(status.value)"
+          @dragleave="onDragLeave"
+          @drop="onDrop(status.value)"
+        >
           <div class="mb-6">
             <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">
               {{ status.label }}
@@ -22,7 +30,11 @@
             <div 
               v-for="ticket in getTicketsByStatus(status.value)" 
               :key="ticket.id"
-              class="bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md cursor-default"
+              class="bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md cursor-grab"
+              :class="draggingTicketId === ticket.id ? 'opacity-50' : ''"
+              draggable="true"
+              @dragstart="onDragStart(ticket.id)"
+              @dragend="onDragEnd"
             >
               <span class="block text-[10px] font-mono text-red-500 mb-2">TICKET-{{ ticket.id }}</span>
               <h4 class="text-sm font-semibold text-gray-900 leading-tight mb-3">
@@ -49,6 +61,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 
 const tickets = ref([]);
 const showModal = ref(false);
+const draggingTicketId = ref(null);
+const dropTargetStatus = ref(null);
+const isUpdatingStatus = ref(false);
 
 const statuses = [
   { label: 'À traiter', value: 'Open' },
@@ -61,12 +76,87 @@ const getTicketsByStatus = (statusValue) => {
   return tickets.value.filter(t => t.status === statusValue);
 };
 
-onMounted(async () => {
+const loadTickets = async () => {
   try {
     const response = await api.get('/tickets/');
     tickets.value = response.data;
   } catch (err) {
     console.error("Erreur lors du chargement des tickets", err);
   }
+};
+
+const onDragStart = (ticketId) => {
+  draggingTicketId.value = ticketId;
+};
+
+const onDragEnd = () => {
+  draggingTicketId.value = null;
+  dropTargetStatus.value = null;
+};
+
+const onDragOver = (statusValue) => {
+  dropTargetStatus.value = statusValue;
+};
+
+const onDragLeave = () => {
+  dropTargetStatus.value = null;
+};
+
+const onDrop = async (targetStatus) => {
+  if (draggingTicketId.value === null || isUpdatingStatus.value) {
+    return;
+  }
+
+  const ticket = tickets.value.find((item) => item.id === draggingTicketId.value);
+  if (!ticket) {
+    onDragEnd();
+    return;
+  }
+
+  if (ticket.status === targetStatus) {
+    onDragEnd();
+    return;
+  }
+
+  isUpdatingStatus.value = true;
+
+  try {
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token');
+
+    if (!token) {
+      alert('Session expirée, reconnecte-toi.');
+      onDragEnd();
+      return;
+    }
+
+    const response = await api.patch(
+      `/tickets/${ticket.id}/status`,
+      {
+        status: targetStatus
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const updatedTicket = response.data;
+    tickets.value = tickets.value.map((item) =>
+      item.id === updatedTicket.id ? updatedTicket : item
+    );
+  } catch (error) {
+    console.error('Erreur lors du changement de statut', error);
+    alert("Impossible de changer le statut du ticket.");
+  } finally {
+    isUpdatingStatus.value = false;
+    onDragEnd();
+  }
+};
+
+onMounted(async () => {
+  await loadTickets();
 });
 </script>

@@ -64,11 +64,39 @@ const router = createRouter({
   routes,
 });
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payloadBase64 = token.split(".")[1];
+    if (!payloadBase64) {
+      return true;
+    }
+
+    const payloadJson = atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(payloadJson) as { exp?: number };
+
+    if (!payload.exp) {
+      return false;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp <= now;
+  } catch {
+    return true;
+  }
+}
+
 
 router.beforeEach((to, from, next) => {
-  const token =
+  const rawToken =
     localStorage.getItem("access_token") ||
     sessionStorage.getItem("access_token");
+
+  const token = rawToken && !isTokenExpired(rawToken) ? rawToken : null;
+
+  if (rawToken && !token) {
+    localStorage.removeItem("access_token");
+    sessionStorage.removeItem("access_token");
+  }
 
   const isPublicRoute = to.path === "/login";
 

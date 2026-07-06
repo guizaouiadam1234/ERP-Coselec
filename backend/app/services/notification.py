@@ -29,7 +29,10 @@ def get_notifications(
     query = db.query(Notification).filter(Notification.user_id == user_id)
     if unread_only:
         query = query.filter(Notification.is_read == False)
-    return query.all()
+    return query.order_by(
+        Notification.created_at.desc(),
+        Notification.id.desc()
+    ).all()
 
 def mark_notification_as_read(
     db,
@@ -60,4 +63,7 @@ def get_user_notifications(
     query = db.query(Notification).filter(Notification.user_id == user_id)
     if unread_only:
         query = query.filter(Notification.is_read == False)
-    return query.all()
+    return query.order_by(
+        Notification.created_at.desc(),
+        Notification.id.desc()
+    ).all()

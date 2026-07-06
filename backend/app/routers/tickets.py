@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.notification import NotificationType
 from app.schemas.ticket import (
     TicketCreate,
+    TicketStatusUpdate,
     TicketResponse
 )
 from app.services.notification import create_notification
@@ -50,3 +51,45 @@ def get_tickets(
     db: Session = Depends(get_db)
 ):
     return db.query(Ticket).all()
+
+
+@router.patch(
+    "/{ticket_id}/status/",
+    response_model=TicketResponse
+)
+@router.patch(
+    "/{ticket_id}/status",
+    response_model=TicketResponse,
+    include_in_schema=False
+)
+def update_ticket_status(
+    ticket_id: int,
+    payload: TicketStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.id == ticket_id)
+        .first()
+    )
+
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found"
+        )
+
+    ticket.status = payload.status
+    db.commit()
+    db.refresh(ticket)
+
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        message=f"Ticket {ticket.id} passe a {ticket.status.value}",
+        type=NotificationType.INFO,
+        reference_id=ticket.id
+    )
+
+    return ticket

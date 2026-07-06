@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 
 const api = axios.create({
   baseURL: "http://localhost:8000",
@@ -33,16 +33,22 @@ function normalizeApiUrl(url?: string): string | undefined {
   return query ? `${normalized}?${query}` : normalized;
 }
 
+function getAuthToken(): string | null {
+  return (
+    localStorage.getItem("access_token") ||
+    sessionStorage.getItem("access_token")
+  );
+}
+
 api.interceptors.request.use((config) => {
   config.url = normalizeApiUrl(config.url);
 
-  const token =
-    localStorage.getItem("access_token") ||
-    sessionStorage.getItem("access_token");
+  const token = getAuthToken();
 
   if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+    const headers = AxiosHeaders.from(config.headers || {});
+    headers.set("Authorization", `Bearer ${token}`);
+    config.headers = headers;
   }
 
   return config;
@@ -56,7 +62,22 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    const status = error?.response?.status;
+    const url = String(error?.config?.url || "");
+    const isAuthEndpoint = url.includes("/login") || url.includes("/register");
+
+    if (status === 401 && !isAuthEndpoint && typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      sessionStorage.removeItem("access_token");
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
+  }
 );
 
 export default api;
