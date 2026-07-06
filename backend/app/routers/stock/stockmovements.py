@@ -5,6 +5,7 @@ from fastapi import (
 )
 
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 
 from app.database import get_db
 
@@ -30,7 +31,14 @@ def get_movements(
     partner_id: int | None = Query(None),
     db: Session = Depends(get_db)
 ):
-    query = db.query(StockMovement)
+    query = (
+        db.query(StockMovement)
+        .options(
+            joinedload(StockMovement.product),
+            joinedload(StockMovement.warehouse),
+            joinedload(StockMovement.partner)
+        )
+    )
 
     if product_id:
         query = query.filter(

@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
 )
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -54,3 +55,7 @@ class StockMovement(Base):
         DateTime,
         default=datetime.utcnow
     )
+
+    product = relationship("Product")
+    warehouse = relationship("Warehouse")
+    partner = relationship("Partner")
