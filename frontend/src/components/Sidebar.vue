@@ -88,9 +88,9 @@ const toggleSidebar = () => {
         />
 
         <SidebarItem
-          to="/approvals"
+          to="/tickets"
           icon="check_circle"
-          label="Validations"
+          label="Tickets"
           :collapsed="collapsed"
         />
       </div>

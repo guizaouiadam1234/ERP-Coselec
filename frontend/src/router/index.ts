@@ -16,7 +16,7 @@ const routes = [
     path: "/home",
     component: HomeView,
   },
-  
+  //rh
 {
     path: "/employees",
     component: EmployeesView,
@@ -25,6 +25,7 @@ const routes = [
     path: "/departments",
     component: () => import("../views/employees/DepartmentView.vue")
   },
+  // stock
   {
     path: "/stock/movement",
     component: () => import("../views/Stock/StockMovementView.vue")
@@ -37,6 +38,24 @@ const routes = [
     path: "/stock/canvas",
     component: () => import("../views/Stock/StockCanvasView.vue")
   },
+  // tickets
+  {
+    path: "/tickets",
+    name: "tickets",
+    component: () => import("../views/TicketsView.vue")
+  },
+  {
+    path: "/requests",
+    name: "requests",
+    component: () => import("../views/RequestsView.vue")
+  }
+  ,
+  {
+    path: "/requests/:section(hr|it|facilities)",
+    name: "request-form",
+    component: () => import("../views/RequestFormView.vue"),
+    props: true
+  }
 
 ];
 

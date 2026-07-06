@@ -17,6 +17,8 @@ from app.routers.stock.products import router as products_router
 from app.routers.stock.warehouses import router as warehouses_router
 from app.routers.stock.partners import router as partners_router
 from app.routers.stock.categories import router as categories_router
+#ticket router
+from app.routers.tickets import router as tickets_router
 
 from app.auth import (
     get_current_user,
@@ -57,6 +59,7 @@ app.include_router(warehouses_router)
 app.include_router(partners_router)
 app.include_router(categories_router)
 app.include_router(planning_router)
+app.include_router(tickets_router)
 
 
 class LoginRequest(BaseModel):
