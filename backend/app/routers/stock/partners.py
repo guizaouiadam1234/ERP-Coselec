@@ -6,9 +6,11 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
 
 from app.models.stock.partner import Partner
+from app.models.user import User
 
 from app.schemas.stock.partner import (
     PartnerCreate,
@@ -24,6 +26,7 @@ router = APIRouter(
 
 @router.get("/", response_model=list[PartnerResponse])
 def get_partners(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return db.query(Partner).all()
@@ -32,6 +35,7 @@ def get_partners(
 @router.get("/{partner_id}", response_model=PartnerResponse)
 def get_partner(
     partner_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     partner = (
@@ -56,6 +60,7 @@ def get_partner(
 )
 def create_partner(
     partner: PartnerCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     existing = (
@@ -88,6 +93,7 @@ def create_partner(
 def update_partner(
     partner_id: int,
     partner: PartnerUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     existing = (
@@ -134,6 +140,7 @@ def update_partner(
 @router.delete("/{partner_id}")
 def delete_partner(
     partner_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     partner = (

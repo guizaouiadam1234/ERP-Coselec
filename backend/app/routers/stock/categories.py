@@ -6,9 +6,11 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
 
 from app.models.stock.category import Category
+from app.models.user import User
 
 from app.schemas.stock.category import (
     CategoryCreate,
@@ -24,6 +26,7 @@ router = APIRouter(
 
 @router.get("/", response_model=list[CategoryResponse])
 def get_categories(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return db.query(Category).all()
@@ -32,6 +35,7 @@ def get_categories(
 @router.get("/{category_id}", response_model=CategoryResponse)
 def get_category(
     category_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     category = (
@@ -56,6 +60,7 @@ def get_category(
 )
 def create_category(
     category: CategoryCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     existing = (
@@ -88,6 +93,7 @@ def create_category(
 def update_category(
     category_id: int,
     category: CategoryUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     existing = (
@@ -118,6 +124,7 @@ def update_category(
 @router.delete("/{category_id}")
 def delete_category(
     category_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     category = (

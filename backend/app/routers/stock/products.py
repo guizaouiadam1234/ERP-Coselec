@@ -7,9 +7,11 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
 
 from app.models.stock.product import Product
+from app.models.user import User
 
 from app.schemas.stock.product import (
     ProductCreate,
@@ -28,6 +30,7 @@ def get_products(
     q: str | None = Query(default=None),
     skip: int = 0,
     limit: int = 50,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     query = db.query(Product)
@@ -48,6 +51,7 @@ def get_products(
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product(
     product_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     product = (
@@ -72,6 +76,7 @@ def get_product(
 )
 def create_product(
     product: ProductCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     existing_product = (
@@ -101,6 +106,7 @@ def create_product(
 def update_product(
     product_id: int,
     product: ProductUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     existing_product = (
@@ -147,6 +153,7 @@ def update_product(
 @router.delete("/{product_id}")
 def delete_product(
     product_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     product = (

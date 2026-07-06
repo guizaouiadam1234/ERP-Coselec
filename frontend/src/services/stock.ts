@@ -4,24 +4,24 @@
 
   export const StockService = {
     getCategories() {
-      return api.get('/categories');
+      return api.get('/categories/');
     },
 
     getProducts(categoryId?: number) {
-      const url = categoryId ? `/products?category_id=${categoryId}` : '/products';
+      const url = categoryId ? `/products/?category_id=${categoryId}` : '/products/';
       return api.get(url);
     },
 
     getWarehouses() {
-      return api.get('/warehouses');
+      return api.get('/warehouses/');
     },
 
     getPartners() {
-      return api.get('/partners');
+      return api.get('/partners/');
     },
 
     getMovements() {
-      return api.get('/stock-movements');
+      return api.get('/stock-movements/');
     },
 
     createMovement(payload: {
@@ -32,7 +32,7 @@
       partner_id: number | null;
       notes?: string;
     }) {
-      const movementUrl = payload.type === 'ENTRY' ? '/stock/entry' : '/stock/exit';
+      const movementUrl = payload.type === 'ENTRY' ? '/stock/entry/' : '/stock/exit/';
 
       return api.post(movementUrl, {
         product_id: payload.product_id,
@@ -42,7 +42,7 @@
       });
     },
     getStockOverview(){
-      return api.get('/stocks');
+      return api.get('/stocks/');
     },
     createCategory(payload: {name: string, description?: string; code?: string}){
       const normalizedCode = (payload.code || payload.name || 'CAT')
@@ -51,7 +51,7 @@
         .replace(/^_+|_+$/g, '')
         .slice(0, 24) || 'CAT';
 
-      return api.post('/categories', {
+      return api.post('/categories/', {
         code: normalizedCode,
         name: payload.name
       });
@@ -67,13 +67,13 @@
         body.code = payload.code;
       }
 
-      return api.put(`/categories/${categoryId}`, body);
+      return api.put(`/categories/${categoryId}/`, body);
     },
     deleteCategory(categoryId: number) {
-      return api.delete(`/categories/${categoryId}`);
+      return api.delete(`/categories/${categoryId}/`);
     },
     createProduct(payload: { name: string; sku_code: string; category_id: number; safety_threshold?: number }) {
-      return api.post('/products', {
+      return api.post('/products/', {
         code: payload.sku_code,
         designation: payload.name,
         category_id: payload.category_id,
@@ -104,9 +104,9 @@
         body.minimum_stock = payload.safety_threshold;
       }
 
-      return api.put(`/products/${productId}`, body);
+      return api.put(`/products/${productId}/`, body);
     },
     deleteProduct(productId: number) {
-      return api.delete(`/products/${productId}`);
+      return api.delete(`/products/${productId}/`);
     }
   };

@@ -5,7 +5,9 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
+from app.models.user import User
 
 from app.schemas.stock.stockoperations import (
     StockEntry,
@@ -27,6 +29,7 @@ router = APIRouter(
 @router.post("/entry")
 def create_entry(
     payload: StockEntry,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return stock_entry(
@@ -40,6 +43,7 @@ def create_entry(
 @router.post("/exit")
 def create_exit(
     payload: StockExit,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return stock_exit(
@@ -53,6 +57,7 @@ def create_exit(
 @router.post("/transfer")
 def create_transfer(
     payload: StockTransfer,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return stock_transfer(

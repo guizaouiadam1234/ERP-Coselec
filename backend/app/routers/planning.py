@@ -3,9 +3,11 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, time
 import unicodedata
+from app.auth import get_current_user
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.hr.attendance import Attendance, AttendanceStatus
+from app.models.user import User
 from app.schemas.hr.hr import AttendanceUpdate
 
 router = APIRouter(prefix="/hr", tags=["HR Planning"])
@@ -41,6 +43,7 @@ def _status_to_frontend_token(value: str) -> str:
 def get_schedule_matrix(
     start_date: str = Query(..., description="Date de début au format YYYY-MM-DD"),
     days_count: int = Query(7, description="Nombre de jours à afficher dans la matrice"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
@@ -97,6 +100,7 @@ def get_schedule_matrix(
 @router.post("/assignment")
 def update_attendance_slot(
     payload: AttendanceUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     # Verify the target employee profile exists

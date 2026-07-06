@@ -5,10 +5,12 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
 
 from app.models.stock.product import Product
 from app.models.stock.stock import Stock
+from app.models.user import User
 
 from app.schemas.stock.dashboard import (
     DashboardResponse
@@ -25,6 +27,7 @@ router = APIRouter(
     response_model=DashboardResponse
 )
 def get_dashboard(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     products = db.query(Product).all()

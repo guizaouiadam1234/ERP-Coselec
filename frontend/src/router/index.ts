@@ -51,7 +51,9 @@ router.beforeEach((to, from, next) => {
     localStorage.getItem("access_token") ||
     sessionStorage.getItem("access_token");
 
-  if (to.path === "/home" && !token) {
+  const isPublicRoute = to.path === "/login";
+
+  if (!isPublicRoute && !token) {
     next("/login");
   }
   else if (to.path === "/login" && token) {

@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
 
 from app.models.employee import Employee
+from app.models.user import User
 
 from app.schemas.employee import (
     EmployeeCreate,
@@ -21,6 +23,7 @@ router = APIRouter(
     response_model=list[EmployeeResponse]
 )
 def get_employees(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return db.query(Employee).all()
@@ -31,6 +34,7 @@ def get_employees(
 )
 def get_employee(
     employee_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     employee = (
@@ -53,6 +57,7 @@ def get_employee(
 )
 def create_employee(
     employee: EmployeeCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     new_employee = Employee(
@@ -72,6 +77,7 @@ def create_employee(
 def update_employee(
     employee_id: int,
     employee_data: EmployeeCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     employee = (
@@ -97,6 +103,7 @@ def update_employee(
 @router.delete("/{employee_id}")
 def delete_employee(
     employee_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     employee = (
