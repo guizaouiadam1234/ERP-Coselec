@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 #routers
 from app.routers.employees import router as employees_router
+from app.routers.planning import router as planning_router
 ## stock routers
 from app.routers.stock.stocks import router as stocks_router
 from app.routers.stock.stockoperations import router as stock_operations_router

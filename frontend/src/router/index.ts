@@ -22,6 +22,10 @@ const routes = [
     component: EmployeesView,
   },
   {
+    path: "/departments",
+    component: () => import("../views/employees/DepartmentView.vue")
+  },
+  {
     path: "/stock/movement",
     component: () => import("../views/Stock/StockMovementView.vue")
   },
