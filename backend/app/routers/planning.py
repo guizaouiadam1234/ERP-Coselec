@@ -1,18 +1,46 @@
-# backend/app/routers/planning.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
+import unicodedata
 from app.database import get_db
 from app.models.employee import Employee
-# Import your real attendance/assignment model here, for example:
-# from app.models.attendance import Attendance 
+from app.models.hr.attendance import Attendance, AttendanceStatus
+from app.schemas.hr.hr import AttendanceUpdate
 
 router = APIRouter(prefix="/hr", tags=["HR Planning"])
 
+
+def _normalize_status_token(value: str) -> str:
+    stripped = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    return stripped.strip().replace("-", "_").replace(" ", "_").upper()
+
+
+def _parse_attendance_status(value: str) -> AttendanceStatus:
+    token = _normalize_status_token(value)
+
+    # Accept both API tokens (CHANTIER/SITE/CONGE) and display labels (Chantier/Site/Congé).
+    for status in AttendanceStatus:
+        if token == _normalize_status_token(status.name) or token == _normalize_status_token(status.value):
+            return status
+
+    if token == "CONGE":
+        return AttendanceStatus.CONGE
+
+    raise ValueError(f"Unsupported status: {value}")
+
+
+def _status_to_frontend_token(value: str) -> str:
+    try:
+        return _parse_attendance_status(value).name
+    except ValueError:
+        return "SITE"
+
+# --- Endpoint 1: Fetch the Dynamic Schedule Matrix Grid ---
 @router.get("/schedule-matrix")
 def get_schedule_matrix(
     start_date: str = Query(..., description="Date de début au format YYYY-MM-DD"),
-    days_count: int = Query(7, description="Nombre de jours à afficher"),
+    days_count: int = Query(7, description="Nombre de jours à afficher dans la matrice"),
     db: Session = Depends(get_db)
 ):
     try:
@@ -22,6 +50,18 @@ def get_schedule_matrix(
     
     date_range = [start + timedelta(days=i) for i in range(days_count)]
     employees = db.query(Employee).all()
+    
+    # Pre-fetch overrides for the date range to avoid N+1 query performance hits
+    end_date = date_range[-1]
+    start_dt = datetime.combine(start, time.min)
+    end_dt = datetime.combine(end_date, time.max)
+    overrides = db.query(Attendance).filter(
+        Attendance.date >= start_dt,
+        Attendance.date <= end_dt
+    ).all()
+    
+    override_map = {(o.employee_id, o.date.date()): o.status for o in overrides}
+    
     response_matrix = []
     
     for emp in employees:
@@ -33,24 +73,12 @@ def get_schedule_matrix(
                 current_status = "NONE"
             
             else:
-                # RULE 2: Standard weekdays default strictly to "SITE" (Sur Site)
-                current_status = "SITE"
-                
-                # RULE 3: Check if HR has explicitly overridden this day's status
-                # Here is your query loop structure targeting your database logs:
-                # override = db.query(Attendance).filter(
-                #     Attendance.employee_id == emp.id,
-                #     Attendance.date == current_date
-                # ).first()
-                #
-                # if override:
-                #     current_status = override.status # e.g., "CONGE", "CHANTIER", etc.
-                
-                # --- Baseline Simulation Rule for Preview (Safe to adjust or remove) ---
-                if emp.id % 3 == 0 and current_date.weekday() == 2:
-                    current_status = "CONGE"
-                elif emp.id % 2 == 0 and current_date.weekday() in [0, 1]:
-                    current_status = "CHANTIER"
+                # RULE 2: Read HR override from DB if it exists, otherwise default strictly to "SITE"
+                db_lookup_key = (emp.id, current_date)
+                if db_lookup_key in override_map:
+                    current_status = _status_to_frontend_token(override_map[db_lookup_key])
+                else:
+                    current_status = "SITE"
 
             schedule_days.append(current_status)
             
@@ -63,3 +91,49 @@ def get_schedule_matrix(
         })
         
     return response_matrix
+
+
+# --- Endpoint 2: HR Save / Override a Specific Slot ---
+@router.post("/assignment")
+def update_attendance_slot(
+    payload: AttendanceUpdate,
+    db: Session = Depends(get_db)
+):
+    # Verify the target employee profile exists
+    emp_exists = db.query(Employee).filter(Employee.id == payload.employee_id).first()
+    if not emp_exists:
+        raise HTTPException(status_code=404, detail="Collaborateur introuvable.")
+        
+    # Validate the status string matches our exact backend ENUM constraints
+    try:
+        status_enum = _parse_attendance_status(payload.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Statut invalide. Choisissez parmi: CHANTIER, SITE, CONGE, TELETRAVAIL")
+
+    # Check if a log entry already exists for this specific employee on this date
+    existing_record = db.query(Attendance).filter(
+        Attendance.employee_id == payload.employee_id,
+        func.date(Attendance.date) == payload.date
+    ).first()
+    
+    if existing_record:
+        # If the manager selects "SITE" (which is our base default), we can just delete the override
+        if status_enum == AttendanceStatus.SITE:
+            db.delete(existing_record)
+        else:
+            # Update the existing restriction row
+            existing_record.status = status_enum.value
+            existing_record.notes = payload.notes
+    else:
+        # Create a brand new restriction row if it's not the default office location
+        if status_enum != AttendanceStatus.SITE:
+            new_record = Attendance(
+                employee_id=payload.employee_id,
+                date=datetime.combine(payload.date, time.min),
+                status=status_enum.value,
+                notes=payload.notes
+            )
+            db.add(new_record)
+            
+    db.commit()
+    return {"message": "Planning mis à jour avec succès"}

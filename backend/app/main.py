@@ -56,6 +56,7 @@ app.include_router(products_router)
 app.include_router(warehouses_router)
 app.include_router(partners_router)
 app.include_router(categories_router)
+app.include_router(planning_router)
 
 
 class LoginRequest(BaseModel):

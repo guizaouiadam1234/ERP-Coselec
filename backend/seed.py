@@ -1,147 +1,77 @@
+# backend/seed_planning.py
+import random
+from datetime import date, timedelta
 from app.database import SessionLocal
-
-from app.models.department import Department
 from app.models.employee import Employee
+from app.models.hr.attendance import Attendance, AttendanceStatus
 
-db = SessionLocal()
+def seed_attendances():
+    db = SessionLocal()
+    employees = db.query(Employee).all()
+    
+    if not employees:
+        print("❌ Aucun employé trouvé. Veuillez d'abord ajouter des collaborateurs.")
+        db.close()
+        return
 
-# -------------------------
-# DEPARTMENTS
-# -------------------------
+    # We will generate data from July 1st, 2026 to December 31st, 2026
+    # This covers the dates in your screenshot and gives you plenty of padding
+    start_date = date(2026, 7, 1)
+    end_date = date(2026, 12, 31)
+    delta = end_date - start_date
+    
+    all_dates = [start_date + timedelta(days=i) for i in range(delta.days + 1)]
+    
+    print("🧹 Nettoyage des anciennes données de présence...")
+    db.query(Attendance).delete()
+    
+    attendances_to_add = []
+    
+    print("🎲 Génération de données réalistes pour le planning...")
+    for emp in employees:
+        i = 0
+        while i < len(all_dates):
+            current_date = all_dates[i]
+            
+            # Skip weekends (5 = Saturday, 6 = Sunday)
+            if current_date.weekday() >= 5:
+                i += 1
+                continue
+                
+            # Randomly decide what the employee is doing for this chunk of time
+            # Weights: 50% chance of staying on SITE, 40% CHANTIER, 10% CONGE
+            state = random.choices(['SITE', 'CHANTIER', 'CONGE'], weights=[50, 40, 10])[0]
+            
+            # Determine how long they stay in this state to make it look realistic
+            if state == 'CHANTIER':
+                chunk_size = random.randint(3, 14) # 3 to 14 days on a construction site
+            elif state == 'CONGE':
+                chunk_size = random.randint(5, 15) # 1 to 3 weeks of vacation
+            else:
+                chunk_size = random.randint(2, 7) # Standard office days
+            
+            # Apply the state for the duration of the chunk
+            for j in range(chunk_size):
+                if i + j < len(all_dates):
+                    day = all_dates[i+j]
+                    
+                    # Only apply to weekdays and ONLY save to DB if it's not the default "SITE"
+                    if day.weekday() < 5 and state != 'SITE':
+                        record = Attendance(
+                            employee_id=emp.id,
+                            date=day,
+                            status=state
+                        )
+                        attendances_to_add.append(record)
+            
+            # Jump forward by the chunk size we just generated
+            i += chunk_size
+            
+    db.add_all(attendances_to_add)
+    db.commit()
+    db.close()
+    
+    print(f"✅ Succès ! {len(attendances_to_add)} enregistrements d'affectation ont été ajoutés à la base de données.")
 
-departments_data = [
-    ("RH", "RH"),
-    ("Direction", "DIR"),
-    ("Commercial", "COM"),
-    ("Logistique", "LOG"),
-    ("Maintenance", "MNT"),
-    ("Finance", "FIN"),
-    ("Projets", "PRJ"),
-]
-
-department_ids = {}
-
-for name, code in departments_data:
-    department = (
-        db.query(Department)
-        .filter(Department.code == code)
-        .first()
-    )
-
-    if not department:
-        department = Department(
-            name=name,
-            code=code
-        )
-
-        db.add(department)
-        db.commit()
-        db.refresh(department)
-
-    department_ids[code] = department.id
-
-# -------------------------
-# EMPLOYEES
-# -------------------------
-
-employees_data = [
-    {
-        "matricule": "EMP001",
-        "first_name": "A",
-        "last_name": "A",
-        "email": "a@coselec.ma",
-        "phone": "770000001",
-        "position": "Responsable RH",
-        "status": "CDI",
-        "department_code": "RH",
-    },
-    {
-        "matricule": "EMP002",
-        "first_name": "B",
-        "last_name": "B",
-        "email": "b@coselec.ma",
-        "phone": "770000002",
-        "position": "Directeur",
-        "status": "CDI",
-        "department_code": "DIR",
-    },
-    {
-        "matricule": "EMP003",
-        "first_name": "C",
-        "last_name": "C",
-        "email": "c@coselec.ma",
-        "phone": "770000003",
-        "position": "Commercial",
-        "status": "CDI",
-        "department_code": "COM",
-    },
-    {
-        "matricule": "EMP004",
-        "first_name": "D",
-        "last_name": "D",
-        "email": "d@coselec.ma",
-        "phone": "770000004",
-        "position": "Chef Projet",
-        "status": "CDI",
-        "department_code": "PRJ",
-    },
-    {
-        "matricule": "EMP005",
-        "first_name": "E",
-        "last_name": "E",
-        "email": "e@coselec.ma",
-        "phone": "770000005",
-        "position": "Technicien",
-        "status": "CDD",
-        "department_code": "MNT",
-    },
-    {
-        "matricule": "EMP006",
-        "first_name": "F",
-        "last_name": "F",
-        "email": "f@coselec.ma",
-        "phone": "770000006",
-        "position": "Logisticien",
-        "status": "CDI",
-        "department_code": "LOG",
-    },
-    {
-        "matricule": "EMP007",
-        "first_name": "G",
-        "last_name": "G",
-        "email": "g@coselec.ma",
-        "phone": "770000007",
-        "position": "Comptable",
-        "status": "CDI",
-        "department_code": "FIN",
-    }
-]
-
-for emp in employees_data:
-    existing = (
-        db.query(Employee)
-        .filter(Employee.matricule == emp["matricule"])
-        .first()
-    )
-
-    if existing:
-        continue
-
-    employee = Employee(
-        matricule=emp["matricule"],
-        first_name=emp["first_name"],
-        last_name=emp["last_name"],
-        email=emp["email"],
-        phone=emp["phone"],
-        position=emp["position"],
-        status=emp["status"],
-        department_id=department_ids[
-            emp["department_code"]
-        ]
-    )
-
-    db.add(employee)
-
-db.commit()
-
-print("✅ Départements et employés créés avec succès")
+if __name__ == "__main__":
+    seed_attendances()

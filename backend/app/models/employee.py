@@ -4,7 +4,7 @@ from sqlalchemy import (
     String,
     ForeignKey
 )
-
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -31,3 +31,4 @@ class Employee(Base):
         Integer,
         ForeignKey("departments.id")
     )
+    attendances = relationship("Attendance", back_populates="employee", cascade="all, delete-orphan")

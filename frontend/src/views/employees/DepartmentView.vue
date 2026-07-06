@@ -23,12 +23,19 @@ interface EmployeeSchedule {
 }
 
 const isLoading = ref<boolean>(false);
+const isSaving = ref<boolean>(false);
 const selectedDepartment = ref<string>('');
 const employees = ref<EmployeeSchedule[]>([]);
 
 // Timeline Control States - Defaulting to current week base
 const currentDateCursor = ref<string>('2026-07-06'); 
 const daysViewWindow = ref<number>(7); 
+
+// Modal Assignment State
+const showModal = ref<boolean>(false);
+const selectedEmployee = ref<EmployeeSchedule | null>(null);
+const selectedDate = ref<string>('');
+const selectedStatus = ref<'CHANTIER' | 'SITE' | 'CONGE'>('SITE');
 
 const departments = ref<Department[]>([
   { id: 1, name: 'Département A' },
@@ -41,7 +48,10 @@ const currentWeekDays = ref<WeekDay[]>([]);
 const calculateGridHeaders = (startDateStr: string, count: number): void => {
   const start = new Date(startDateStr);
   const days: WeekDay[] = [];
-  const labels: string[] = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const weekdayFormatter = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
+  const dayNumberFormatter = new Intl.DateTimeFormat('fr-FR', { day: '2-digit' });
+  const normalize = (value: string): string => value.replace('.', '').replace(/\s+/g, ' ').trim();
+  const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
   
   for (let i = 0; i < count; i++) {
     const nextDate = new Date(start);
@@ -51,11 +61,12 @@ const calculateGridHeaders = (startDateStr: string, count: number): void => {
     const monthFormatter = (nextDate.getMonth() + 1).toString().padStart(2, '0');
     const yearFormatter = nextDate.getFullYear();
     
-    const dayLabel = labels[nextDate.getDay()] as string;
+    const dayLabel = capitalize(normalize(weekdayFormatter.format(nextDate)));
+    const displayDate = dayNumberFormatter.format(nextDate);
 
     days.push({
       label: dayLabel,
-      date: `${dayFormatter}/${monthFormatter}`,
+      date: displayDate,
       fullDate: `${yearFormatter}-${monthFormatter}-${dayFormatter}`
     });
   }
@@ -76,15 +87,40 @@ const fetchHRData = async (): Promise<void> => {
     employees.value = res.data;
   } catch (error) {
     console.error("Erreur d'initialisation du planning RH", error);
-    // Anonymized fallback state layout values
-    employees.value = [
-      { id: 1, name: 'Collaborateur A', role: 'Rôle A', department_id: 1, schedule: ['CHANTIER', 'CHANTIER', 'SITE', 'CHANTIER', 'CHANTIER', 'NONE', 'NONE'] },
-      { id: 2, name: 'Collaborateur B', role: 'Rôle B', department_id: 3, schedule: ['SITE', 'SITE', 'CONGE', 'CONGE', 'CONGE', 'NONE', 'NONE'] },
-      { id: 3, name: 'Collaborateur C', role: 'Rôle C', department_id: 1, schedule: ['CHANTIER', 'CHANTIER', 'CHANTIER', 'CHANTIER', 'CHANTIER', 'NONE', 'NONE'] },
-      { id: 4, name: 'Collaborateur D', role: 'Rôle D', department_id: 2, schedule: ['SITE', 'CHANTIER', 'SITE', 'CHANTIER', 'SITE', 'NONE', 'NONE'] }
-    ];
   } finally {
     isLoading.value = false;
+  }
+};
+
+// Triggers when an HR admin clicks a grid slot
+const openAssignmentModal = (emp: EmployeeSchedule, dayIndex: number): void => {
+  const targetDay = currentWeekDays.value[dayIndex];
+  if (!targetDay || emp.schedule[dayIndex] === 'NONE') return; // Skip weekends
+
+  selectedEmployee.value = emp;
+  selectedDate.value = targetDay.fullDate;
+  selectedStatus.value = (emp.schedule[dayIndex] as 'CHANTIER' | 'SITE' | 'CONGE') || 'SITE';
+  showModal.value = true;
+};
+
+// Saves the slot override update back to the backend table configuration
+const submitAssignment = async (): Promise<void> => {
+  if (!selectedEmployee.value) return;
+  isSaving.value = true;
+
+  try {
+    await api.post('/hr/assignment', {
+      employee_id: selectedEmployee.value.id,
+      date: selectedDate.value,
+      status: selectedStatus.value
+    });
+    showModal.value = false;
+    await fetchHRData(); // Dynamic calendar live refresh loop
+  } catch (error) {
+    console.error("Erreur lors de l'affectation", error);
+    alert("Impossible de sauvegarder les modifications.");
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -113,9 +149,9 @@ watch([currentDateCursor, daysViewWindow], () => {
 
 const getStatusClasses = (status: 'CHANTIER' | 'SITE' | 'CONGE' | 'NONE'): string => {
   switch (status) {
-    case 'CHANTIER': return 'bg-red-600 text-white border-red-700 font-semibold shadow-3xs';
-    case 'SITE': return 'bg-gray-800 text-white border-gray-900 font-semibold shadow-3xs';
-    case 'CONGE': return 'bg-amber-400 text-gray-900 border-amber-500 font-bold shadow-3xs';
+    case 'CHANTIER': return 'bg-red-600 text-white border-red-700 font-semibold shadow-3xs cursor-pointer hover:bg-red-700';
+    case 'SITE': return 'bg-gray-800 text-white border-gray-900 font-semibold shadow-3xs cursor-pointer hover:bg-gray-900';
+    case 'CONGE': return 'bg-amber-400 text-gray-900 border-amber-500 font-bold shadow-3xs cursor-pointer hover:bg-amber-500';
     default: return 'bg-gray-100 text-gray-400 border-gray-200 font-normal';
   }
 };
@@ -179,6 +215,7 @@ onMounted(() => {
             <select v-model.number="daysViewWindow" class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-red-500 cursor-pointer">
               <option :value="7">Vue 1 Semaine</option>
               <option :value="14">Vue 2 Semaines</option>
+              <option :value="30">Vue 1 Mois</option>
             </select>
           </div>
 
@@ -235,10 +272,11 @@ onMounted(() => {
 
                 <td v-for="(status, index) in emp.schedule" :key="index" class="p-1 border-l border-gray-100 text-center align-middle whitespace-nowrap">
                   <div 
+                    @click="openAssignmentModal(emp, index)"
                     :class="getStatusClasses(status)"
-                    class="mx-auto rounded-xl py-2 text-xxs border uppercase tracking-wider font-bold min-h-[32px] flex items-center justify-center max-w-[90px]"
+                    class="mx-auto rounded-xl py-2 text-xxs border uppercase tracking-wider font-bold min-h-[32px] flex items-center justify-center max-w-[90px] transition-all"
                   >
-                    {{ getStatusLabel(status) }}
+                   
                   </div>
                 </td>
               </tr>
@@ -246,6 +284,63 @@ onMounted(() => {
           </table>
         </div>
       </div>
+
+      <!-- INTERACTIVE ASSIGNMENT MODAL OVERLAY -->
+      <div v-if="showModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-sm w-full shadow-xl border border-gray-100 overflow-hidden">
+          <div class="bg-gray-900 px-5 py-4 text-white flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-base">Modifier l'affectation</h3>
+              <p class="text-xxs text-gray-400 mt-0.5">Date sélectionnée : {{ selectedDate }}</p>
+            </div>
+            <button @click="showModal = false" class="text-white/80 hover:text-white focus:outline-none">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          
+          <div class="p-5 space-y-4">
+            <div>
+              <p class="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wide">Collaborateur</p>
+              <p class="text-sm font-bold text-gray-800">{{ selectedEmployee?.name }}</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Choisir le statut</label>
+              <div class="grid grid-cols-1 gap-2">
+                <label class="flex items-center space-x-3 p-2.5 border rounded-lg cursor-pointer transition-colors" :class="selectedStatus === 'SITE' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:bg-gray-50'">
+                  <input type="radio" value="SITE" v-model="selectedStatus" class="text-gray-900 focus:ring-gray-900" />
+                  <span class="text-xs font-bold text-gray-800">Sur Site (Bureau)</span>
+                </label>
+                
+                <label class="flex items-center space-x-3 p-2.5 border rounded-lg cursor-pointer transition-colors" :class="selectedStatus === 'CHANTIER' ? 'border-red-600 bg-red-50/30' : 'border-gray-200 hover:bg-gray-50'">
+                  <input type="radio" value="CHANTIER" v-model="selectedStatus" class="text-red-600 focus:ring-red-600" />
+                  <span class="text-xs font-bold text-gray-800">En Chantier</span>
+                </label>
+
+                <label class="flex items-center space-x-3 p-2.5 border rounded-lg cursor-pointer transition-colors" :class="selectedStatus === 'CONGE' ? 'border-amber-500 bg-amber-50/30' : 'border-gray-200 hover:bg-gray-50'">
+                  <input type="radio" value="CONGE" v-model="selectedStatus" class="text-amber-500 focus:ring-amber-500" />
+                  <span class="text-xs font-bold text-gray-800">Congé Payé</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-2">
+              <button type="button" @click="showModal = false" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-semibold hover:bg-gray-50">
+                Annuler
+              </button>
+              <button 
+                type="button" 
+                @click="submitAssignment" 
+                :disabled="isSaving"
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-xs shadow-xs disabled:opacity-50"
+              >
+                {{ isSaving ? 'Enregistrement...' : 'Confirmer' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </AppLayout>
 </template>
