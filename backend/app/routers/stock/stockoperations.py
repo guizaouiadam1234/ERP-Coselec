@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.models.notification import NotificationType
 from app.models.user import User
+from app.services.notification import create_notification
 
 from app.schemas.stock.stockoperations import (
     StockEntry,
@@ -32,13 +34,23 @@ def create_entry(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return stock_entry(
+    result = stock_entry(
         db,
         payload.product_id,
         payload.warehouse_id,
         payload.partner_id,
         payload.quantity
     )
+
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        message=f"Entree stock: produit {payload.product_id}, quantite {payload.quantity}",
+        type=NotificationType.INFO,
+        reference_id=payload.product_id
+    )
+
+    return result
 
 @router.post("/exit")
 def create_exit(
@@ -46,7 +58,7 @@ def create_exit(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return stock_exit(
+    result = stock_exit(
         db,
         payload.product_id,
         payload.warehouse_id,
@@ -54,13 +66,23 @@ def create_exit(
         payload.quantity
     )
 
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        message=f"Sortie stock: produit {payload.product_id}, quantite {payload.quantity}",
+        type=NotificationType.WARNING,
+        reference_id=payload.product_id
+    )
+
+    return result
+
 @router.post("/transfer")
 def create_transfer(
     payload: StockTransfer,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return stock_transfer(
+    result = stock_transfer(
         db,
         payload.product_id,
         payload.from_warehouse_id,
@@ -68,4 +90,18 @@ def create_transfer(
         payload.partner_id,
         payload.quantity
     )
+
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        message=(
+            f"Transfert stock: produit {payload.product_id}, "
+            f"depot {payload.from_warehouse_id} vers {payload.to_warehouse_id}, "
+            f"quantite {payload.quantity}"
+        ),
+        type=NotificationType.INFO,
+        reference_id=payload.product_id
+    )
+
+    return result
 

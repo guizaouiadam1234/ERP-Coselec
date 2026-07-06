@@ -4,6 +4,14 @@ const api = axios.create({
   baseURL: "http://localhost:8000",
 });
 
+function isMutatingMethod(method?: string): boolean {
+  if (!method) {
+    return false;
+  }
+
+  return ["post", "put", "patch", "delete"].includes(method.toLowerCase());
+}
+
 function normalizeApiUrl(url?: string): string | undefined {
   if (!url || typeof url !== "string") {
     return url;
@@ -39,6 +47,17 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => {
+    if (isMutatingMethod(response.config.method) && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("notifications:refresh"));
+    }
+
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
 
 export default api;
 export { api };

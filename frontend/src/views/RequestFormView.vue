@@ -42,10 +42,11 @@
               <div class="flex flex-wrap gap-3 pt-2">
                 <button
                   type="submit"
+                  :disabled="isSubmitting.value"
                   class="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-red-200 transition hover:bg-red-700"
                 >
                   <span class="material-symbols-outlined text-[18px]">send</span>
-                  Envoyer la demande
+                  {{ isSubmitting.value ? "Envoi..." : "Envoyer la demande" }}
                 </button>
                 <RouterLink
                   :to="{ name: 'requests' }"
@@ -91,11 +92,15 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
 import { RouterLink } from 'vue-router';
+import { useRouter } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { createTicket, type TicketCategory } from '@/services/tickets';
 
 const props = defineProps<{
   section: 'hr' | 'it' | 'facilities';
 }>();
+
+const router = useRouter();
 
 const sectionMeta = computed(() => {
   const map = {
@@ -153,7 +158,42 @@ const form = reactive({
   attachment: ''
 });
 
-const submitRequest = () => {
-  window.alert(`Demande ${sectionMeta.value.title.toLowerCase()} prête à être envoyée.`);
+const isSubmitting = reactive({
+  value: false
+});
+
+const sectionToCategory: Record<typeof props.section, TicketCategory> = {
+  hr: 'Leave',
+  it: 'IT',
+  facilities: 'Facility'
+};
+
+const submitRequest = async () => {
+  if (isSubmitting.value) {
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  try {
+    await createTicket({
+      title: form.subject,
+      description: form.description,
+      category: sectionToCategory[props.section],
+      meta_data: {
+        source_section: props.section,
+        priority: form.priority,
+        attachment: form.attachment || null
+      }
+    });
+
+    window.alert('Demande créée avec succès.');
+    router.push({ name: 'tickets' });
+  } catch (error) {
+    console.error('Erreur lors de la création de la demande', error);
+    window.alert('Impossible de créer la demande pour le moment.');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>

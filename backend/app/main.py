@@ -19,6 +19,8 @@ from app.routers.stock.partners import router as partners_router
 from app.routers.stock.categories import router as categories_router
 #ticket router
 from app.routers.tickets import router as tickets_router
+#notifications router
+from app.routers.notifications import router as notifications_router
 
 from app.auth import (
     get_current_user,
@@ -39,9 +41,11 @@ from app.models.stock.product import Product
 from app.models.stock.stock import Stock
 from app.models.stock.stockmovement import StockMovement
 from app.models.stock.warehouse import Warehouse
+from app.models.notification import NotificationType
 
 from app.models.relations.user_role import UserRole
 from app.models.relations.role_permission import RolePermission
+from app.services.notification import create_notification
 
 
 
@@ -60,6 +64,7 @@ app.include_router(partners_router)
 app.include_router(categories_router)
 app.include_router(planning_router)
 app.include_router(tickets_router)
+app.include_router(notifications_router)
 
 
 class LoginRequest(BaseModel):
@@ -94,6 +99,14 @@ def register_user(name: str, email: str, password: str, db: Session = Depends(ge
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    create_notification(
+        db=db,
+        user_id=user.id,
+        message="Bienvenue sur l'ERP. Votre compte est actif.",
+        type=NotificationType.INFO
+    )
+
     return {"message": "User registered successfully", "user_id": user.id}
 
 @app.post("/login")

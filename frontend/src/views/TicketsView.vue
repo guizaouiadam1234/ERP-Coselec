@@ -51,10 +51,10 @@ const tickets = ref([]);
 const showModal = ref(false);
 
 const statuses = [
-  { label: 'À traiter', value: 'OPEN' },
-  { label: 'En cours', value: 'IN_PROGRESS' },
-  { label: 'Résolu', value: 'RESOLVED' },
-  { label: 'Fermé', value: 'CLOSED' }
+  { label: 'À traiter', value: 'Open' },
+  { label: 'En cours', value: 'In Progress' },
+  { label: 'Résolu', value: 'Resolved' },
+  { label: 'Fermé', value: 'Closed' }
 ];
 
 const getTicketsByStatus = (statusValue) => {

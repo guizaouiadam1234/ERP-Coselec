@@ -7,8 +7,10 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.hr.attendance import Attendance, AttendanceStatus
+from app.models.notification import NotificationType
 from app.models.user import User
 from app.schemas.hr.hr import AttendanceUpdate
+from app.services.notification import create_notification
 
 router = APIRouter(prefix="/hr", tags=["HR Planning"])
 
@@ -39,7 +41,8 @@ def _status_to_frontend_token(value: str) -> str:
         return "SITE"
 
 # --- Endpoint 1: Fetch the Dynamic Schedule Matrix Grid ---
-@router.get("/schedule-matrix")
+@router.get("/schedule-matrix/")
+@router.get("/schedule-matrix", include_in_schema=False)
 def get_schedule_matrix(
     start_date: str = Query(..., description="Date de début au format YYYY-MM-DD"),
     days_count: int = Query(7, description="Nombre de jours à afficher dans la matrice"),
@@ -97,7 +100,8 @@ def get_schedule_matrix(
 
 
 # --- Endpoint 2: HR Save / Override a Specific Slot ---
-@router.post("/assignment")
+@router.post("/assignment/")
+@router.post("/assignment", include_in_schema=False)
 def update_attendance_slot(
     payload: AttendanceUpdate,
     current_user: User = Depends(get_current_user),
@@ -140,4 +144,13 @@ def update_attendance_slot(
             db.add(new_record)
             
     db.commit()
+
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        message=f"Planning mis a jour pour l'employe {payload.employee_id} le {payload.date}",
+        type=NotificationType.INFO,
+        reference_id=payload.employee_id
+    )
+
     return {"message": "Planning mis à jour avec succès"}

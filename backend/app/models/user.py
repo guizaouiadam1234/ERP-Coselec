@@ -14,3 +14,8 @@ class User(Base):
         "Ticket",
         back_populates="creator"
     )
+
+    notifications = relationship(
+        "Notification",
+        back_populates="user"
+    )
