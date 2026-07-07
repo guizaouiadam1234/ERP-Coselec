@@ -20,6 +20,17 @@ router = APIRouter(
 )
 
 
+def _employee_label(employee: Employee) -> str:
+    full_name = f"{employee.first_name or ''} {employee.last_name or ''}".strip()
+    if full_name:
+        return full_name
+
+    if employee.matricule:
+        return employee.matricule
+
+    return f"Employe #{employee.id}"
+
+
 @router.get(
     "/",
     response_model=list[EmployeeResponse]
@@ -73,7 +84,7 @@ def create_employee(
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Employe cree: {new_employee.id}",
+        message=f"Employe cree: {_employee_label(new_employee)}",
         type=NotificationType.INFO,
         reference_id=new_employee.id
     )
@@ -111,7 +122,7 @@ def update_employee(
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Employe mis a jour: {employee.id}",
+        message=f"Employe mis a jour: {_employee_label(employee)}",
         type=NotificationType.INFO,
         reference_id=employee.id
     )
@@ -140,10 +151,12 @@ def delete_employee(
 
     db.commit()
 
+    deleted_label = _employee_label(employee)
+
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Employe supprime: {employee.id}",
+        message=f"Employe supprime: {deleted_label}",
         type=NotificationType.WARNING,
         reference_id=employee.id
     )

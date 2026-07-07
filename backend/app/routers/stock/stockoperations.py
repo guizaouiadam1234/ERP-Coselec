@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.notification import NotificationType
+from app.models.stock.partner import Partner
+from app.models.stock.product import Product
+from app.models.stock.warehouse import Warehouse
 from app.models.user import User
 from app.services.notification import create_notification
 
@@ -28,6 +31,42 @@ router = APIRouter(
     tags=["Stock"]
 )
 
+
+def _resolve_product_label(db: Session, product_id: int) -> str:
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id)
+        .first()
+    )
+    if not product:
+        return f"Produit #{product_id}"
+    return product.designation
+
+
+def _resolve_warehouse_label(db: Session, warehouse_id: int) -> str:
+    warehouse = (
+        db.query(Warehouse)
+        .filter(Warehouse.id == warehouse_id)
+        .first()
+    )
+    if not warehouse:
+        return f"Entrepot #{warehouse_id}"
+    return warehouse.name
+
+
+def _resolve_partner_label(db: Session, partner_id: int | None) -> str:
+    if partner_id is None:
+        return "Coselec Interne"
+
+    partner = (
+        db.query(Partner)
+        .filter(Partner.id == partner_id)
+        .first()
+    )
+    if not partner:
+        return f"Partenaire #{partner_id}"
+    return partner.name
+
 @router.post("/entry")
 def create_entry(
     payload: StockEntry,
@@ -42,10 +81,19 @@ def create_entry(
         payload.quantity
     )
 
+    product_label = _resolve_product_label(db, payload.product_id)
+    warehouse_label = _resolve_warehouse_label(db, payload.warehouse_id)
+    partner_label = _resolve_partner_label(db, payload.partner_id)
+
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Entree stock: produit {payload.product_id}, quantite {payload.quantity}",
+        message=(
+            f"Entree stock: produit {product_label}, "
+            f"entrepot {warehouse_label}, "
+            f"partenaire {partner_label}, "
+            f"quantite {payload.quantity}"
+        ),
         type=NotificationType.INFO,
         reference_id=payload.product_id
     )
@@ -66,10 +114,19 @@ def create_exit(
         payload.quantity
     )
 
+    product_label = _resolve_product_label(db, payload.product_id)
+    warehouse_label = _resolve_warehouse_label(db, payload.warehouse_id)
+    partner_label = _resolve_partner_label(db, payload.partner_id)
+
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Sortie stock: produit {payload.product_id}, quantite {payload.quantity}",
+        message=(
+            f"Sortie stock: produit {product_label}, "
+            f"entrepot {warehouse_label}, "
+            f"partenaire {partner_label}, "
+            f"quantite {payload.quantity}"
+        ),
         type=NotificationType.WARNING,
         reference_id=payload.product_id
     )
@@ -91,12 +148,18 @@ def create_transfer(
         payload.quantity
     )
 
+    product_label = _resolve_product_label(db, payload.product_id)
+    from_warehouse_label = _resolve_warehouse_label(db, payload.from_warehouse_id)
+    to_warehouse_label = _resolve_warehouse_label(db, payload.to_warehouse_id)
+    partner_label = _resolve_partner_label(db, payload.partner_id)
+
     create_notification(
         db=db,
         user_id=current_user.id,
         message=(
-            f"Transfert stock: produit {payload.product_id}, "
-            f"depot {payload.from_warehouse_id} vers {payload.to_warehouse_id}, "
+            f"Transfert stock: produit {product_label}, "
+            f"depot {from_warehouse_label} vers {to_warehouse_label}, "
+            f"partenaire {partner_label}, "
             f"quantite {payload.quantity}"
         ),
         type=NotificationType.INFO,

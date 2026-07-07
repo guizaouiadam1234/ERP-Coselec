@@ -145,10 +145,15 @@ def update_attendance_slot(
             
     db.commit()
 
+    employee_label = (
+        f"{emp_exists.first_name or ''} {emp_exists.last_name or ''}".strip()
+        or f"Employe #{emp_exists.id}"
+    )
+
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Planning mis a jour pour l'employe {payload.employee_id} le {payload.date}",
+        message=f"Planning mis a jour pour {employee_label} le {payload.date}",
         type=NotificationType.INFO,
         reference_id=payload.employee_id
     )

@@ -41,9 +41,9 @@ function togglePanel() {
 
 async function markAsRead(notificationId: number) {
     try {
-        const updated = await markNotificationAsRead(notificationId);
-        notifications.value = notifications.value.map((item) =>
-            item.id === updated.id ? updated : item
+        await markNotificationAsRead(notificationId);
+        notifications.value = notifications.value.filter(
+            (item) => item.id !== notificationId
         );
     } catch (error) {
         console.error("Unable to mark notification as read", error);

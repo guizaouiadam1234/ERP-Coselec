@@ -99,6 +99,9 @@ def stock_entry(
 
     internal_partner_id = get_or_create_internal_partner(db).id
     magasin_warehouse = get_magasin_warehouse(db)
+    is_internal_movement = (
+        partner_id is None or resolved_partner_id == internal_partner_id
+    )
 
     destination_stock = get_or_create_stock(
         db,
@@ -107,7 +110,7 @@ def stock_entry(
         resolved_partner_id
     )
 
-    if magasin_warehouse and warehouse_id != magasin_warehouse.id:
+    if is_internal_movement and magasin_warehouse and warehouse_id != magasin_warehouse.id:
         magasin_stock = get_or_create_stock(
             db,
             product_id,

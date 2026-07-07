@@ -51,9 +51,18 @@ def mark_notification_as_read(
             detail="Notification not found"
         )
     notification.is_read = True
+    response_payload = {
+        "id": notification.id,
+        "user_id": notification.user_id,
+        "message": notification.message,
+        "type": notification.type,
+        "is_read": True,
+        "created_at": notification.created_at,
+        "reference_id": notification.reference_id,
+    }
+    db.delete(notification)
     db.commit()
-    db.refresh(notification)
-    return notification
+    return response_payload
 
 def get_user_notifications(
     db,

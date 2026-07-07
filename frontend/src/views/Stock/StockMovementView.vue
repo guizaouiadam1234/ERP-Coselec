@@ -202,6 +202,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
+import axios from 'axios';
 import { StockService } from '@/services/stock';
 import AppLayout from '@/layouts/AppLayout.vue';
 
@@ -425,6 +426,15 @@ const submitMovement = async () => {
     alert("Le mouvement de stock a bien été enregistré !");
   } catch (error) {
     console.error("Erreur lors de la validation du mouvement", error);
+    if (axios.isAxiosError(error)) {
+      const backendMessage =
+        typeof error.response?.data?.detail === 'string'
+          ? error.response.data.detail
+          : "Impossible d'enregistrer l'opération backend.";
+      alert(backendMessage);
+      return;
+    }
+
     alert("Impossible d'enregistrer l'opération backend.");
   }
 };
