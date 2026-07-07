@@ -27,7 +27,7 @@ def check_document_expirations():
                 db=db,
                 user_id=1, 
                 message=message,
-                type=NotificationType.SYSTEM, # À adapter selon tes enums
+                type=NotificationType.INFO,
                 reference_id=doc.id #
             )
     finally:

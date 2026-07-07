@@ -12,3 +12,8 @@ env/
 # IDEs
 .vscode/
 .idea/
+
+
+# Local files
+**/.local/
+.local/
