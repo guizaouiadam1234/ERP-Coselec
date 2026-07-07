@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 
 from app.models.employee import Employee
@@ -36,6 +36,7 @@ def _employee_label(employee: Employee) -> str:
     response_model=list[EmployeeResponse]
 )
 def get_employees(
+    _: None = Depends(check_permission("employees.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -47,6 +48,7 @@ def get_employees(
 )
 def get_employee(
     employee_id: int,
+    _: None = Depends(check_permission("employees.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -70,6 +72,7 @@ def get_employee(
 )
 def create_employee(
     employee: EmployeeCreate,
+    _: None = Depends(check_permission("employees.create")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -98,6 +101,7 @@ def create_employee(
 def update_employee(
     employee_id: int,
     employee_data: EmployeeCreate,
+    _: None = Depends(check_permission("employees.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -132,6 +136,7 @@ def update_employee(
 @router.delete("/{employee_id}")
 def delete_employee(
     employee_id: int,
+    _: None = Depends(check_permission("employees.delete")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

@@ -5,7 +5,7 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 from app.models.notification import NotificationType
 from app.models.stock.partner import Partner
@@ -70,6 +70,7 @@ def _resolve_partner_label(db: Session, partner_id: int | None) -> str:
 @router.post("/entry")
 def create_entry(
     payload: StockEntry,
+    _: None = Depends(check_permission("stock.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -103,6 +104,7 @@ def create_entry(
 @router.post("/exit")
 def create_exit(
     payload: StockExit,
+    _: None = Depends(check_permission("stock.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -136,6 +138,7 @@ def create_exit(
 @router.post("/transfer")
 def create_transfer(
     payload: StockTransfer,
+    _: None = Depends(check_permission("stock.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

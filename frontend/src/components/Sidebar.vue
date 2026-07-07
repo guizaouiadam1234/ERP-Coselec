@@ -1,13 +1,42 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import SidebarItem from "./SidebarItem.vue";
+import {
+  getStoredProfile,
+  hasAnyRole,
+  refreshCurrentUserProfile,
+  type CurrentUserProfile,
+} from "@/services/session";
 
 const collapsed = ref(false);
+const profile = ref<CurrentUserProfile | null>(getStoredProfile());
 
 const toggleSidebar = () => {
   collapsed.value = !collapsed.value;
 };
+
+const roles = computed(() => profile.value?.roles || []);
+
+const canViewHr = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "RH", "Direction"]);
+});
+
+const canViewStock = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "Stock / Logistique", "Direction"]);
+});
+
+const canViewDocuments = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "Direction"]);
+});
+
+onMounted(async () => {
+  try {
+    profile.value = await refreshCurrentUserProfile();
+  } catch {
+    profile.value = getStoredProfile();
+  }
+});
 </script>
 
 <template>
@@ -48,7 +77,7 @@ const toggleSidebar = () => {
     <nav class="p-4 space-y-6">
      
       <!-- RH -->
-      <div>
+      <div v-if="canViewHr">
         <h2
           v-if="!collapsed"
           class="text-xs uppercase text-red-200 mb-2"
@@ -97,7 +126,7 @@ const toggleSidebar = () => {
 
 
       <!-- Stock -->
-      <div>
+      <div v-if="canViewStock">
         <h2
           v-if="!collapsed"
           class="text-xs uppercase text-red-200 mb-2"
@@ -128,7 +157,7 @@ const toggleSidebar = () => {
       </div>
 
       <!-- Documents -->
-      <div>
+      <div v-if="canViewDocuments">
         <h2
           v-if="!collapsed"
           class="text-xs uppercase text-red-200 mb-2"

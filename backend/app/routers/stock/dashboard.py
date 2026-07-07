@@ -5,7 +5,7 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 
 from app.models.stock.product import Product
@@ -27,6 +27,7 @@ router = APIRouter(
     response_model=DashboardResponse
 )
 def get_dashboard(
+    _: None = Depends(check_permission("dashboard.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

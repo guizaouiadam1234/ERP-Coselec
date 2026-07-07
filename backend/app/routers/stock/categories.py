@@ -6,7 +6,7 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 
 from app.models.stock.category import Category
@@ -26,6 +26,7 @@ router = APIRouter(
 
 @router.get("/", response_model=list[CategoryResponse])
 def get_categories(
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -35,6 +36,7 @@ def get_categories(
 @router.get("/{category_id}", response_model=CategoryResponse)
 def get_category(
     category_id: int,
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -60,6 +62,7 @@ def get_category(
 )
 def create_category(
     category: CategoryCreate,
+    _: None = Depends(check_permission("stock.create")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -93,6 +96,7 @@ def create_category(
 def update_category(
     category_id: int,
     category: CategoryUpdate,
+    _: None = Depends(check_permission("stock.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -124,6 +128,7 @@ def update_category(
 @router.delete("/{category_id}")
 def delete_category(
     category_id: int,
+    _: None = Depends(check_permission("stock.delete")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

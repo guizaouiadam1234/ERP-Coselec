@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 
 from app.models.stock.warehouse import Warehouse
@@ -24,6 +24,7 @@ router = APIRouter(
 )
 def create_warehouse(
     warehouse: WarehouseCreate,
+    _: None = Depends(check_permission("stock.create")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -56,6 +57,7 @@ def create_warehouse(
     response_model=list[WarehouseResponse]
 )
 def get_warehouses(
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

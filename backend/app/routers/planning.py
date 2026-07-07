@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, time
 import unicodedata
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.hr.attendance import Attendance, AttendanceStatus
@@ -47,6 +47,7 @@ def _status_to_frontend_token(value: str) -> str:
 def get_schedule_matrix(
     start_date: str = Query(..., description="Date de début au format YYYY-MM-DD"),
     days_count: int = Query(7, description="Nombre de jours à afficher dans la matrice"),
+    _: None = Depends(check_permission("hr.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -106,6 +107,7 @@ def get_schedule_matrix(
 def update_attendance_slot(
     payload: AttendanceUpdate,
     background_tasks: BackgroundTasks, # <-- Ajout requis pour l'asynchrone
+    _: None = Depends(check_permission("hr.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

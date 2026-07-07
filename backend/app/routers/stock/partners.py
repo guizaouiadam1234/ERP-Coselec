@@ -6,7 +6,7 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 
 from app.models.stock.partner import Partner
@@ -26,6 +26,7 @@ router = APIRouter(
 
 @router.get("/", response_model=list[PartnerResponse])
 def get_partners(
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -35,6 +36,7 @@ def get_partners(
 @router.get("/{partner_id}", response_model=PartnerResponse)
 def get_partner(
     partner_id: int,
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -60,6 +62,7 @@ def get_partner(
 )
 def create_partner(
     partner: PartnerCreate,
+    _: None = Depends(check_permission("stock.create")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -93,6 +96,7 @@ def create_partner(
 def update_partner(
     partner_id: int,
     partner: PartnerUpdate,
+    _: None = Depends(check_permission("stock.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -140,6 +144,7 @@ def update_partner(
 @router.delete("/{partner_id}")
 def delete_partner(
     partner_id: int,
+    _: None = Depends(check_permission("stock.delete")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

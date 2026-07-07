@@ -6,6 +6,7 @@ import {
     markNotificationAsRead,
     type NotificationItem,
 } from "@/services/notifications";
+import { clearStoredProfile } from "@/services/session";
 
 const router = useRouter();
 const notifications = ref<NotificationItem[]>([]);
@@ -79,6 +80,7 @@ onBeforeUnmount(() => {
 function logout() {
     localStorage.removeItem("access_token");
     sessionStorage.removeItem("access_token");
+    clearStoredProfile();
 
     router.push("/login");
 }

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 from app.models.user import User
 from app.schemas.notification import NotificationResponse
@@ -19,6 +19,7 @@ router = APIRouter(
 @router.get("/", response_model=List[NotificationResponse])
 def read_user_notifications(
     unread_only: bool = False,
+    _: None = Depends(check_permission("notifications.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -31,6 +32,7 @@ def read_user_notifications(
 @router.patch("/{notification_id}/read", response_model=NotificationResponse)
 def mark_as_read(
     notification_id: int,
+    _: None = Depends(check_permission("notifications.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

@@ -1,4 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
+import {
+  clearStoredProfile,
+  getStoredProfile,
+  hasAnyRole,
+  refreshCurrentUserProfile,
+} from "@/services/session";
 
 import LoginView from "../views/LoginView.vue";
 import HomeView from "../views/HomeView.vue";
@@ -20,23 +26,38 @@ const routes = [
 {
     path: "/employees",
     component: EmployeesView,
+    meta: {
+      requiredRoles: ["Admin", "RH", "Direction"],
+    },
   },
   {
     path: "/departments",
-    component: () => import("../views/employees/DepartmentView.vue")
+    component: () => import("../views/employees/DepartmentView.vue"),
+    meta: {
+      requiredRoles: ["Admin", "RH", "Direction"],
+    },
   },
   // stock
   {
     path: "/stock/movement",
-    component: () => import("../views/Stock/StockMovementView.vue")
+    component: () => import("../views/Stock/StockMovementView.vue"),
+    meta: {
+      requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
+    },
   },
   {
     path: "/stock",
-    component: () => import("../views/Stock/StockOverviewView.vue")
+    component: () => import("../views/Stock/StockOverviewView.vue"),
+    meta: {
+      requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
+    },
   },
   {
     path: "/stock/canvas",
-    component: () => import("../views/Stock/StockCanvasView.vue")
+    component: () => import("../views/Stock/StockCanvasView.vue"),
+    meta: {
+      requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
+    },
   },
   // tickets
   {
@@ -85,8 +106,22 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
+async function getActiveProfile() {
+  const cached = getStoredProfile();
 
-router.beforeEach((to, from, next) => {
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    return await refreshCurrentUserProfile();
+  } catch {
+    return null;
+  }
+}
+
+
+router.beforeEach(async (to, from, next) => {
   const rawToken =
     localStorage.getItem("access_token") ||
     sessionStorage.getItem("access_token");
@@ -96,6 +131,7 @@ router.beforeEach((to, from, next) => {
   if (rawToken && !token) {
     localStorage.removeItem("access_token");
     sessionStorage.removeItem("access_token");
+    clearStoredProfile();
   }
 
   const isPublicRoute = to.path === "/login";
@@ -106,6 +142,18 @@ router.beforeEach((to, from, next) => {
   else if (to.path === "/login" && token) {
     next("/home");
   } else {
+    const requiredRoles = (to.meta.requiredRoles as string[] | undefined) || [];
+
+    if (requiredRoles.length > 0) {
+      const profile = await getActiveProfile();
+      const authorized = hasAnyRole(profile?.roles, requiredRoles);
+
+      if (!authorized) {
+        next("/home");
+        return;
+      }
+    }
+
     next();
   }
 });

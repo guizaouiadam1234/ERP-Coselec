@@ -30,7 +30,7 @@ from app.auth import (
     create_access_token,
     hash_password,
 )
-from app.database import Base, engine, get_db
+from app.database import Base, engine, get_db, SessionLocal
 
 from app.models.user import User
 from app.models.role import Role
@@ -46,9 +46,22 @@ from app.models.stock.warehouse import Warehouse
 from app.models.notification import NotificationType
 
 from app.services.notification import create_notification
+from app.services.rbac import (
+    ensure_rbac_setup,
+    assign_default_role,
+    ensure_admin_role_for_email,
+    assign_role_to_user,
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    try:
+        ensure_rbac_setup(db)
+        ensure_admin_role_for_email(db, "adam@adam.com")
+    finally:
+        db.close()
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(check_document_expirations, 'cron', hour=8, minute=0) 
     scheduler.start()
@@ -108,6 +121,12 @@ def register_user(name: str, email: str, password: str, db: Session = Depends(ge
     db.commit()
     db.refresh(user)
 
+    ensure_rbac_setup(db)
+    assign_default_role(db, user)
+
+    if email.strip().lower() == "adam@adam.com":
+        assign_role_to_user(db, user, "Admin")
+
     create_notification(
         db=db,
         user_id=user.id,
@@ -166,5 +185,6 @@ def me(
     return {
         "id": current_user.id,
         "name": current_user.name,
-        "email": current_user.email
+        "email": current_user.email,
+        "roles": [role.name for role in current_user.roles]
     }

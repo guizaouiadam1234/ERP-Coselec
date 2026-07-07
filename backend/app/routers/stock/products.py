@@ -7,7 +7,7 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.database import get_db
 
 from app.models.stock.product import Product
@@ -30,6 +30,7 @@ def get_products(
     q: str | None = Query(default=None),
     skip: int = 0,
     limit: int = 50,
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -51,6 +52,7 @@ def get_products(
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product(
     product_id: int,
+    _: None = Depends(check_permission("stock.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -76,6 +78,7 @@ def get_product(
 )
 def create_product(
     product: ProductCreate,
+    _: None = Depends(check_permission("stock.create")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -106,6 +109,7 @@ def create_product(
 def update_product(
     product_id: int,
     product: ProductUpdate,
+    _: None = Depends(check_permission("stock.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -153,6 +157,7 @@ def update_product(
 @router.delete("/{product_id}")
 def delete_product(
     product_id: int,
+    _: None = Depends(check_permission("stock.delete")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

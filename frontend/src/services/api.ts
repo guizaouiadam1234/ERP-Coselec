@@ -1,4 +1,5 @@
 import axios, { AxiosHeaders } from "axios";
+import { clearStoredProfile } from "./session";
 
 const api = axios.create({
   baseURL: "http://localhost:8000",
@@ -70,6 +71,7 @@ api.interceptors.response.use(
     if (status === 401 && !isAuthEndpoint && typeof window !== "undefined") {
       localStorage.removeItem("access_token");
       sessionStorage.removeItem("access_token");
+      clearStoredProfile();
 
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.auth import get_current_user
+from app.auth import get_current_user, check_permission
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.models.notification import NotificationType
@@ -27,6 +27,7 @@ router = APIRouter(
 )
 def create_ticket(
     ticket: TicketCreate,
+    _: None = Depends(check_permission("tickets.create")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -50,6 +51,7 @@ def create_ticket(
 
 @router.get("/", response_model=list[TicketResponse])
 def get_tickets(
+    _: None = Depends(check_permission("tickets.read")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -69,6 +71,7 @@ def update_ticket_status(
     ticket_id: int,
     payload: TicketStatusUpdate,
     background_tasks: BackgroundTasks,
+    _: None = Depends(check_permission("tickets.update")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

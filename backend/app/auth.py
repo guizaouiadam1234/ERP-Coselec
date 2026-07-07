@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+from pathlib import Path
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -9,11 +10,25 @@ from dotenv import load_dotenv
 from app.database import get_db
 from app.models.user import User
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+def _require_secret_key() -> str:
+    if SECRET_KEY:
+        return SECRET_KEY
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=(
+            "SECRET_KEY is not configured. Add SECRET_KEY in backend/.env "
+            "and restart the backend server."
+        ),
+    )
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -38,7 +53,7 @@ def create_access_token(data: dict):
 
     return jwt.encode(
         to_encode,
-        SECRET_KEY,
+        _require_secret_key(),
         algorithm=ALGORITHM
     )
 
@@ -58,7 +73,7 @@ def get_current_user(
     try:
         payload = jwt.decode(
             token,
-            SECRET_KEY,
+            _require_secret_key(),
             algorithms=[ALGORITHM]
         )
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { login } from "../services/auth";
+import { refreshCurrentUserProfile } from "@/services/session";
 
 import { useRouter } from "vue-router";
 
@@ -31,6 +32,8 @@ async function handleSubmit() {
 		if (data?.access_token) {
 			const storage = rememberMe.value ? localStorage : sessionStorage;
 			storage.setItem("access_token", data.access_token);
+
+			await refreshCurrentUserProfile();
 		}
 
 		successMessage.value = "Connexion reussie. Bienvenue.";
