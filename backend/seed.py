@@ -13,6 +13,8 @@ from app.models.stock.warehouse import Warehouse
 from app.models.stock.stock import Stock
 from app.models.hr.attendance import Attendance
 from app.models.hr.document import EmployeeDocument
+from app.models.permission import Permission
+from app.models.role import Role
 
 # Initialisation de Faker (noms génériques/internationaux)
 fake = Faker()
@@ -34,6 +36,26 @@ def seed_database():
         db.query(Department).delete()
         db.commit()
 
+        print("🔑 Création des rôles et permissions...")
+
+        # Création des permissions
+        perm_stock_read = Permission(code="stock.read", name="Voir les stocks")
+        perm_stock_write = Permission(code="stock.edit", name="Modifier les stocks")
+        perm_emp_read = Permission(code="employee.read", name="Voir les employés")
+
+        db.add_all([perm_stock_read, perm_stock_write, perm_emp_read])
+        db.commit()
+
+        # Création des rôles
+        role_admin = Role(name="Admin", description="Accès total")
+        role_tech = Role(name="Technicien", description="Accès limité aux stocks")
+
+        # Assignation des permissions aux rôles
+        role_admin.permissions = [perm_stock_read, perm_stock_write, perm_emp_read]
+        role_tech.permissions = [perm_stock_read]
+
+        db.add_all([role_admin, role_tech])
+        db.commit()
         # ---------------------------------------------------------
         # 1. CRÉATION DES DÉPARTEMENTS
         # ---------------------------------------------------------

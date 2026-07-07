@@ -75,3 +75,20 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+def check_permission(required_permission: str):
+    def dependency(current_user: User = Depends(get_current_user)):
+        permission_checker = any(
+            permission.code == required_permission
+            for role in current_user.roles
+            for permission in role.permissions
+        )
+
+        if not permission_checker:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Droit insuffisant pour accéder à cette ressource"
+            )
+
+    return dependency
