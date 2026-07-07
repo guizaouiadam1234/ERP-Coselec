@@ -5,6 +5,8 @@ from app.auth import get_current_user
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.models.notification import NotificationType
+from fastapi import BackgroundTasks
+
 from app.schemas.ticket import (
     TicketCreate,
     TicketStatusUpdate,
@@ -83,6 +85,8 @@ def update_ticket_status(
     ticket.status = payload.status
     db.commit()
     db.refresh(ticket)
+
+    background_tasks.add_task(send_ticket_email,email_to=ticket.creator.email, ticket_title=ticket.title, new_status=ticket.status.value)
 
     create_notification(
         db=db,
