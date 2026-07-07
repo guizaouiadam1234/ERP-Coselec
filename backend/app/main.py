@@ -45,8 +45,6 @@ from app.models.stock.stockmovement import StockMovement
 from app.models.stock.warehouse import Warehouse
 from app.models.notification import NotificationType
 
-from app.models.relations.user_role import UserRole
-from app.models.relations.role_permission import RolePermission
 from app.services.notification import create_notification
 
 @asynccontextmanager

@@ -207,10 +207,6 @@ onMounted(() => {
         <!-- Controls Navigation Row Header -->
         <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div class="flex items-center space-x-4 flex-wrap gap-2">
-            <select v-model="selectedDepartment" class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-red-500 cursor-pointer">
-              <option value="">Tous les pôles</option>
-              <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
-            </select>
 
             <select v-model.number="daysViewWindow" class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-red-500 cursor-pointer">
               <option :value="7">Vue 1 Semaine</option>

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.models.relations import user_roles
 
 class User(Base):
     __tablename__ = "users"
@@ -19,3 +20,4 @@ class User(Base):
         "Notification",
         back_populates="user"
     )
+    roles = relationship("Role", secondary=user_roles, back_populates="users")
