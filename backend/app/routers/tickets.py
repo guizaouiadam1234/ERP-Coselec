@@ -13,6 +13,7 @@ from app.schemas.ticket import (
     TicketResponse
 )
 from app.services.notification import create_notification
+from app.services.email import send_ticket_email
 
 router = APIRouter(
     prefix="/tickets",
@@ -67,6 +68,7 @@ def get_tickets(
 def update_ticket_status(
     ticket_id: int,
     payload: TicketStatusUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

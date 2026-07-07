@@ -1,9 +1,9 @@
-from enum import Enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Boolean
+import enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Boolean, Enum
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-class DocumentCategory(str, Enum):
+class DocumentCategory(str, enum.Enum):
     IDENTITY = "Identité"
     SOCIAL = "Social/Familial"
     CONTRACT = "Contrat"
@@ -15,10 +15,10 @@ class EmployeeDocument(Base):
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
     category = Column(Enum(DocumentCategory), nullable=False)
     file_name = Column(String, nullable=False)
-    storage_path = Column(String, nullable=False) # Chemin dans le bucket MinIO
+    storage_path = Column(String, nullable=False) 
     mime_type = Column(String)
     
-    expiry_date = Column(Date, nullable=True) # Pour l'inspection du travail
-    is_verified = Column(Boolean, default=False) # Double vérification RH
+    expiry_date = Column(Date, nullable=True) 
+    is_verified = Column(Boolean, default=False) 
 
     employee = relationship("Employee", back_populates="documents")

@@ -95,10 +95,22 @@ function logout() {
         </div>
 
         <div class="flex items-center gap-6">
+            <RouterLink
+                to="/home"
+                class="text-gray-600 hover:text-[#d10f2f] transition font-semibold"
+                >
+                <button class="flex items-center gap-2 p-2 rounded-lg hover:bg-red-50 transition">
+                    <span class="material-symbols-outlined text-[#d10f2f]">
+                        home
+                    </span>
+                    Accueil
+                </button>  
+            </RouterLink>
+            <div class="text-gray-600 hover:text-[#d10f2f] transition font-semibold">
             <button
                 data-notification-panel
                 @click.stop="togglePanel"
-                class="relative p-2 rounded-lg hover:bg-red-50 transition"
+                class="relative p-2 rounded-lg hover:bg-red-50 transition flex items-center gap-2 p-2 rounded-lg hover:bg-red-50 transition"
             >
                 <span class="material-symbols-outlined text-[#d10f2f]">
                     notifications
@@ -111,7 +123,9 @@ function logout() {
                 >
                     {{ unreadCount }}
                 </span>
+                Notifications   
             </button>
+            </div>
 
             <div
                 v-if="isOpen"
