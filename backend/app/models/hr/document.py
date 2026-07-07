@@ -1,9 +1,9 @@
 from enum import Enum
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-class DocumentType(str, Enum):
+class DocumentCategory(str, Enum):
     IDENTITY = "Identité"
     SOCIAL = "Social/Familial"
     CONTRACT = "Contrat"

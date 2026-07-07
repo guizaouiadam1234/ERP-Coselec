@@ -86,7 +86,12 @@ def update_ticket_status(
     db.commit()
     db.refresh(ticket)
 
-    background_tasks.add_task(send_ticket_email,email_to=ticket.creator.email, ticket_title=ticket.title, new_status=ticket.status.value)
+    background_tasks.add_task(
+        send_ticket_email,
+        email_to=ticket.creator.email, 
+        subject=f"Mise à jour du ticket: {ticket.title}", 
+        body=f"Le statut de votre demande est passé à : {ticket.status.value}"
+    )
 
     create_notification(
         db=db,

@@ -2,7 +2,9 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
+from app.tasks.hr_alerts import check_document_expirations
 
 
 #routers
@@ -47,11 +49,19 @@ from app.models.relations.user_role import UserRole
 from app.models.relations.role_permission import RolePermission
 from app.services.notification import create_notification
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_document_expirations, 'cron', hour=8, minute=0) 
+    scheduler.start()
+    yield
+    scheduler.shutdown()
 
 
 
 
-app = FastAPI()
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(employees_router)
 app.include_router(stocks_router)

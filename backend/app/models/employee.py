@@ -32,3 +32,4 @@ class Employee(Base):
         ForeignKey("departments.id")
     )
     attendances = relationship("Attendance", back_populates="employee", cascade="all, delete-orphan")
+    documents = relationship("EmployeeDocument", back_populates="employee", cascade="all, delete-orphan")
