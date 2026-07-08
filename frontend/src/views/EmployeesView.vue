@@ -3,25 +3,53 @@
     <Sidebar />
     <div class="flex-1 flex flex-col relative">
       <Navbar />
-      <main class="flex-1 p-6 bg-gray-100 overflow-y-auto">
-        <h1 class="text-2xl font-bold mb-4">Gestion des employés</h1>
+      <main class="flex-1 p-6 bg-gradient-to-br from-red-50 via-white to-red-100/50 overflow-y-auto">
+        <h1 class="text-2xl font-bold mb-4 text-[#b30c27] flex items-center gap-2">
+          <span class="material-symbols-outlined">badge</span>
+          <span>Gestion des employés</span>
+        </h1>
         <button
           @click="showCreateModal = true"
-          class="bg-[#d10f2f] text-white px-4 py-2 rounded-xl hover:bg-[#97091f] transition flex items-center gap-2 mb-6"
+          class="bg-[#d10f2f] text-white px-4 py-2 rounded-xl hover:bg-[#97091f] shadow-[0_10px_30px_rgba(209,15,47,0.28)] transition flex items-center gap-2 mb-6"
         >
           <span class="material-symbols-outlined">person_add</span>
           <span>Ajouter un employé</span>
         </button>
 
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-[0_15px_40px_rgba(127,7,28,0.10)] border border-red-100 overflow-hidden">
           <table class="w-full">
             <thead>
-              <tr class="bg-red-50 text-left">
-                <th class="px-6 py-4 text-sm font-semibold text-gray-700">Matricule</th>
-                <th class="px-6 py-4 text-sm font-semibold text-gray-700">Employé</th>
-                <th class="px-6 py-4 text-sm font-semibold text-gray-700">Email</th>
-                <th class="px-6 py-4 text-sm font-semibold text-gray-700">Poste</th>
-                <th class="px-6 py-4 text-sm font-semibold text-gray-700">Statut</th>
+              <tr class="bg-gradient-to-r from-red-100/90 to-red-50 text-left">
+                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                  <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">pin</span>
+                    <span>Matricule</span>
+                  </span>
+                </th>
+                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                  <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">person</span>
+                    <span>Employé</span>
+                  </span>
+                </th>
+                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                  <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">mail</span>
+                    <span>Email</span>
+                  </span>
+                </th>
+                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                  <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">work</span>
+                    <span>Poste</span>
+                  </span>
+                </th>
+                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                  <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">verified</span>
+                    <span>Statut</span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -29,7 +57,7 @@
                 v-for="employee in employees"
                 :key="employee.id"
                 @click="openEmployeeDetails(employee)"
-                class="border-t hover:bg-red-50/50 transition cursor-pointer"
+                class="border-t border-red-100/80 hover:bg-red-50/70 transition cursor-pointer"
               >
                 <td class="px-6 py-4 text-gray-600 font-medium">
                   {{ employee.matricule || 'EMP' + String(employee.id).padStart(3, "0") }}
@@ -65,20 +93,23 @@
       <div 
         v-if="isSlideOverOpen" 
         @click="closeSlideOver"
-        class="fixed inset-0 bg-black/20 z-40 transition-opacity backdrop-blur-sm"
+        class="fixed inset-0 bg-[#7f071c]/25 z-40 transition-opacity backdrop-blur-sm"
       ></div>
 
       <div 
-        class="fixed inset-y-0 right-0 z-50 w-full max-w-3xl bg-gray-50 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col"
+        class="fixed inset-y-0 right-0 z-50 w-full max-w-3xl bg-gradient-to-b from-red-50 to-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col border-l border-red-100"
         :class="isSlideOverOpen ? 'translate-x-0' : 'translate-x-full'"
       >
-        <div v-if="selectedEmployee" class="px-6 py-6 bg-white border-b border-gray-200 flex justify-between items-start shadow-sm z-10">
+        <div v-if="selectedEmployee" class="px-6 py-6 bg-white border-b border-red-100 flex justify-between items-start shadow-sm z-10">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-full bg-red-100 text-[#d10f2f] flex items-center justify-center text-xl font-bold">
               {{ selectedEmployee.first_name[0] }}{{ selectedEmployee.last_name[0] }}
             </div>
             <div>
-              <h2 class="text-2xl font-bold text-gray-900">{{ selectedEmployee.first_name }} {{ selectedEmployee.last_name }}</h2>
+              <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[#d10f2f]">account_circle</span>
+                <span>{{ selectedEmployee.first_name }} {{ selectedEmployee.last_name }}</span>
+              </h2>
               <div class="flex items-center gap-2 mt-1">
                 <span class="text-sm text-gray-500 font-medium">{{ selectedEmployee.position }}</span>
                 <span class="text-gray-300">•</span>
@@ -88,15 +119,18 @@
               </div>
             </div>
           </div>
-          <button @click="closeSlideOver" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition">
+          <button @click="closeSlideOver" class="p-2 text-[#b94a5d] hover:text-[#7f071c] hover:bg-red-100 rounded-full transition">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
         <div v-if="selectedEmployee" class="flex-1 overflow-y-auto p-6 space-y-8">
           
-          <section class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2">Informations Générales</h3>
+          <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+            <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
+              <span class="material-symbols-outlined text-base">info</span>
+              <span>Informations Générales</span>
+            </h3>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <p class="text-xs text-gray-500 uppercase">Matricule</p>
@@ -109,15 +143,27 @@
               </div>
           </section>
 
-          <section class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+            <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
+              <span class="material-symbols-outlined text-base">contract</span>
+              <span>Contrats</span>
+            </h3>
             <EmployeeContracts :employeeId="selectedEmployee.id" />
           </section>
 
-          <section class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+            <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
+              <span class="material-symbols-outlined text-base">folder_shared</span>
+              <span>Documents</span>
+            </h3>
             <EmployeeDocuments :employeeId="selectedEmployee.id" />
           </section>
 
-          <section class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+            <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
+              <span class="material-symbols-outlined text-base">event_available</span>
+              <span>Congés</span>
+            </h3>
             <EmployeeLeaves :employeeId="selectedEmployee.id" />
           </section>
         </div>
@@ -172,24 +218,25 @@ const closeSlideOver = () => {
 // ---------------------------------------------
 
 const getStatusClass = (status: string) => {
-  if (!status) return "bg-gray-100 text-gray-700";
+  if (!status) return "bg-slate-100 text-slate-700";
   
   switch (status.toUpperCase()) {
     case "CDI":
     case "SUR SITE":
-      return "bg-green-100 text-green-700";
+      return "bg-emerald-100 text-emerald-700";
     case "CDD":
     case "SUR CHANTIER":
-      return "bg-orange-100 text-orange-700";
+    case "ALTERNANT":
+      return "bg-amber-100 text-amber-700";
     case "STAGIAIRE":
-      return "bg-blue-100 text-blue-700";
+      return "bg-sky-100 text-sky-700";
     case "EN CONGÉ":
     case "PRESTATAIRE":
-      return "bg-purple-100 text-purple-700";
+      return "bg-violet-100 text-violet-700";
     case "INACTIF":
-      return "bg-red-100 text-red-700";
+      return "bg-rose-100 text-rose-700";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-slate-100 text-slate-700";
   }
 };
 

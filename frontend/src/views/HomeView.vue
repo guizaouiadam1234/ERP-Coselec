@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import Navbar from "@/components/Navbar.vue";
 import Sidebar from "@/components/Sidebar.vue";
+
+
 </script>
 
 <template>
@@ -28,36 +30,6 @@ import Sidebar from "@/components/Sidebar.vue";
       gérez vos projets et accédez aux informations de
       l'entreprise depuis une plateforme unique.
     </p>
-  </div>
-
-  <div class="mt-8 grid grid-cols-4 gap-6">
-    <div
-      class="bg-white p-6 rounded-2xl border-l-4 border-[#d10f2f] shadow-sm"
-    >
-      <p class="text-gray-500">Employés</p>
-      <h2 class="text-3xl font-bold mt-2">28</h2>
-    </div>
-
-    <div
-      class="bg-white p-6 rounded-2xl border-l-4 border-[#d10f2f] shadow-sm"
-    >
-      <p class="text-gray-500">Demandes</p>
-      <h2 class="text-3xl font-bold mt-2">12</h2>
-    </div>
-
-    <div
-      class="bg-white p-6 rounded-2xl border-l-4 border-[#d10f2f] shadow-sm"
-    >
-      <p class="text-gray-500">Projets</p>
-      <h2 class="text-3xl font-bold mt-2">5</h2>
-    </div>
-
-    <div
-      class="bg-white p-6 rounded-2xl border-l-4 border-[#d10f2f] shadow-sm"
-    >
-      <p class="text-gray-500">Documents</p>
-      <h2 class="text-3xl font-bold mt-2">154</h2>
-    </div>
   </div>
 </main>
 

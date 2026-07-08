@@ -96,7 +96,7 @@ def create_leave_request(
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Nouvelle demande de congé déposée par {employee.first_name} {employee.last_name}",
+        message=f"Nouveau congé posé pour {employee.first_name} {employee.last_name}",
         type=NotificationType.INFO,
         reference_id=new_request.id
     )
@@ -133,6 +133,13 @@ def delete_leave_request(
         raise HTTPException(status_code=404, detail="Leave request not found")
 
     _remove_leave_from_attendance(db, request.employee_id, request.start_date, request.end_date)
+    create_notification(
+        db=db,
+        user_id=current_user.id,
+        message=f"Congé supprimé pour {request.employee.first_name} {request.employee.last_name} du {request.start_date} au {request.end_date}",
+        type=NotificationType.INFO,
+        reference_id=request.id
+    )
     db.delete(request)
     db.commit()
     return {"message": "Leave request deleted successfully"}

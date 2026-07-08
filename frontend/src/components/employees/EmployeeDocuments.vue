@@ -123,11 +123,16 @@ const getCategoryIcon = (category: string) => {
 <template>
   <div class="space-y-4">
     <div class="flex justify-between items-center">
-      <h3 class="text-lg font-semibold text-gray-900">Documents & Pièces jointes</h3>
+      <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#d10f2f]">folder_managed</span>
+        <span>Documents & Pièces jointes</span>
+      </h3>
       <button 
         @click="showForm = !showForm"
-        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+        class="inline-flex items-center gap-2 rounded-xl bg-[#d10f2f] px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-red-100 transition hover:bg-[#97091f]"
       >
+      <span v-if="showForm" class="material-symbols-outlined text-sm">close</span>
+      <span v-else class="material-symbols-outlined text-sm">upload_file</span>
         {{ showForm ? 'Annuler' : 'Ajouter un document' }}
       </button>
     </div>
@@ -136,7 +141,7 @@ const getCategoryIcon = (category: string) => {
       {{ errorMessage }}
     </div>
 
-    <div v-if="showForm" class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-inner max-w-lg">
+    <div v-if="showForm" class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-inner max-w-lg">
       <form @submit.prevent="handleSubmit" class="space-y-3 text-sm">
         
         <div>
@@ -146,14 +151,14 @@ const getCategoryIcon = (category: string) => {
             ref="fileInput"
             @change="handleFileChange"
             required
-            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer bg-white border border-gray-300 rounded-lg"
+            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#d10f2f] file:text-white hover:file:bg-[#97091f] cursor-pointer bg-white border border-red-200 rounded-lg"
           />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Catégorie</label>
-            <select v-model="form.category" class="w-full border border-gray-300 rounded-lg p-2 bg-white text-gray-700">
+            <select v-model="form.category" class="w-full border border-red-200 rounded-lg p-2 bg-white text-gray-700 focus:border-red-300 focus:ring-2 focus:ring-red-100 outline-none">
               <option value="Identité">Identité (CIN, Passeport)</option>
               <option value="Contrat">Contrat & Avenants</option>
               <option value="Social/Familial">Social (RIB, Sécurité Sociale)</option>
@@ -161,14 +166,14 @@ const getCategoryIcon = (category: string) => {
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Date d'expiration (Opt.)</label>
-            <input type="date" v-model="form.expiry_date" class="w-full border border-gray-300 rounded-lg p-2 bg-white text-gray-700" />
+            <input type="date" v-model="form.expiry_date" class="w-full border border-red-200 rounded-lg p-2 bg-white text-gray-700 focus:border-red-300 focus:ring-2 focus:ring-red-100 outline-none" />
           </div>
         </div>
 
         <button 
           type="submit" 
           :disabled="uploading"
-          class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 rounded-lg transition-colors flex justify-center items-center gap-2"
+          class="w-full bg-[#d10f2f] hover:bg-[#97091f] disabled:bg-red-300 text-white font-medium py-2 rounded-lg transition-colors flex justify-center items-center gap-2"
         >
           <span v-if="uploading" class="material-symbols-outlined animate-spin text-sm">progress_activity</span>
           {{ uploading ? 'Envoi en cours...' : 'Envoyer le document' }}
@@ -186,16 +191,16 @@ const getCategoryIcon = (category: string) => {
       <div 
         v-for="doc in documents" 
         :key="doc.id"
-        class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow transition-shadow"
+        class="flex items-center justify-between p-3 bg-white border border-red-100 rounded-xl shadow-sm hover:shadow transition-shadow"
       >
         <button
           type="button"
           @click="handleDownload(doc)"
-          class="flex items-center gap-3 overflow-hidden flex-1 text-left min-w-0 rounded-lg hover:bg-blue-50/60 transition-colors p-1 -m-1"
+          class="flex items-center gap-3 overflow-hidden flex-1 text-left min-w-0 rounded-lg hover:bg-red-50/60 transition-colors p-1 -m-1"
           :disabled="downloadingDocumentId === doc.id"
           :title="`Télécharger ${doc.file_name}`"
         >
-          <div class="p-2 bg-gray-50 text-gray-500 rounded-lg shrink-0 flex items-center justify-center">
+          <div class="p-2 bg-red-50 text-[#d10f2f] rounded-lg shrink-0 flex items-center justify-center">
             <span class="material-symbols-outlined text-xl">{{ getCategoryIcon(doc.category) }}</span>
           </div>
           <div class="overflow-hidden min-w-0">
@@ -213,7 +218,7 @@ const getCategoryIcon = (category: string) => {
           <button
             type="button"
             @click="handleDownload(doc)"
-            class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             :disabled="downloadingDocumentId === doc.id"
             title="Télécharger"
           >
