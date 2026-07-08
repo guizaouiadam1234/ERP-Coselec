@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import date
 from typing import Optional
+from app.models.hr.document import DocumentCategory
 
 class AttendanceUpdate(BaseModel):
     employee_id: int
@@ -32,7 +33,7 @@ class ContractResponse(ContractBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- Schémas Demande de Congé --- #
 class LeaveRequestBase(BaseModel):
@@ -58,3 +59,18 @@ class LeaveRequestResponse(LeaveRequestBase):
 
     class Config:
         from_attributes = True
+
+# --- Documents --- #
+class DocumentResponse(BaseModel):
+    id: int
+    employee_id: int
+    category: DocumentCategory
+    file_name: str
+    storage_path: str
+    mime_type: Optional[str] = None
+    expiry_date: Optional[date] = None
+    is_verified: bool
+
+    class Config:
+        from_attributes = True
+

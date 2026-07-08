@@ -12,6 +12,7 @@ from app.routers.employees import router as employees_router
 from app.routers.planning import router as planning_router
 from app.routers.contracts import router as contracts_router
 from app.routers.leaverequests import router as leave_requests_router
+from app.routers.documents import router as documents_router
 ## stock routers
 from app.routers.stock.stocks import router as stocks_router
 from app.routers.stock.stockoperations import router as stock_operations_router
@@ -90,7 +91,7 @@ app.include_router(tickets_router)
 app.include_router(notifications_router)
 app.include_router(contracts_router)
 app.include_router(leave_requests_router)
-
+app.include_router(documents_router)
 
 class LoginRequest(BaseModel):
     email: str | None = None

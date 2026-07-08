@@ -113,7 +113,10 @@
             <EmployeeContracts :employeeId="selectedEmployee.id" />
           </section>
 
-          </div>
+          <section class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <EmployeeDocuments :employeeId="selectedEmployee.id" />
+          </section>
+        </div>
       </div>
       </div>
   </div>
@@ -125,8 +128,9 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import { getEmployees } from "@/services/employees";
 
-// IMPORT DU SOUS-COMPOSANT (Ajuste le chemin si besoin)
+// IMPORT DU SOUS-COMPOSANT
 import EmployeeContracts from "@/components/employees/EmployeeContracts.vue";
+import EmployeeDocuments from "@/components/employees/EmployeeDocuments.vue";
 
 interface Employee {
   id: number;

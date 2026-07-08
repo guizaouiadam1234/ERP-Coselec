@@ -1,16 +1,26 @@
-from minio import Minio
 import os
-
-minio_client = Minio(
-    os.getenv("MINIO_ENDPOINT"),
-    access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
-    secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
-    secure=False
-)
+from minio import Minio
 
 BUCKET_NAME = "coselec-hr-documents"
 
+
+def get_minio_client() -> Minio:
+    endpoint = os.getenv("MINIO_ENDPOINT")
+    if not endpoint:
+        raise RuntimeError(
+            "MINIO_ENDPOINT is not configured. Set it before uploading documents."
+        )
+
+    return Minio(
+        endpoint,
+        access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+        secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+        secure=False,
+    )
+
 def upload_file_to_minio(file, file_name):
+    minio_client = get_minio_client()
+
     if not minio_client.bucket_exists(BUCKET_NAME):
         minio_client.make_bucket(BUCKET_NAME)
     
@@ -28,3 +38,11 @@ def upload_file_to_minio(file, file_name):
     )
     return f"{BUCKET_NAME}/{file_name}"
 
+def save_file_locally(file, file_name):
+    local_path = os.path.join("uploads", file_name)
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    
+    with open(local_path, "wb") as f:
+        f.write(file.file.read())
+    
+    return local_path
