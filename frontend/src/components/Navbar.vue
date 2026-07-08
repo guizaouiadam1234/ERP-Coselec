@@ -6,12 +6,18 @@ import {
     markNotificationAsRead,
     type NotificationItem,
 } from "@/services/notifications";
-import { clearStoredProfile } from "@/services/session";
+import {
+    clearStoredProfile,
+    getStoredProfile,
+    refreshCurrentUserProfile,
+    type CurrentUserProfile,
+} from "@/services/session";
 
 const router = useRouter();
 const notifications = ref<NotificationItem[]>([]);
 const isOpen = ref(false);
 const isLoading = ref(false);
+const profile = ref<CurrentUserProfile | null>(getStoredProfile());
 
 const unreadCount = computed(() => {
     return notifications.value.filter((item) => !item.is_read).length;
@@ -19,6 +25,20 @@ const unreadCount = computed(() => {
 
 const latestNotifications = computed(() => {
     return notifications.value.slice(0, 6);
+});
+
+const currentUserName = computed(() => {
+    return profile.value?.name || "Utilisateur";
+});
+
+const currentUserRole = computed(() => {
+    const firstRole = profile.value?.roles?.[0];
+    return firstRole || "Utilisateur";
+});
+
+const currentUserInitial = computed(() => {
+    const name = currentUserName.value.trim();
+    return name ? name.charAt(0).toUpperCase() : "U";
 });
 
 async function loadNotifications() {
@@ -70,6 +90,14 @@ onMounted(() => {
     loadNotifications();
     document.addEventListener("click", handleDocumentClick);
     window.addEventListener("notifications:refresh", handleNotificationsRefresh);
+
+    refreshCurrentUserProfile()
+        .then((value) => {
+            profile.value = value;
+        })
+        .catch(() => {
+            profile.value = getStoredProfile();
+        });
 });
 
 onBeforeUnmount(() => {
@@ -174,16 +202,16 @@ function logout() {
                 <div
                     class="h-10 w-10 rounded-full bg-[#d10f2f] text-white flex items-center justify-center"
                 >
-                    A
+                    {{ currentUserInitial }}
                 </div>
 
                 <div>
                     <p class="font-semibold">
-                        Adam Guizaoui
+                        {{ currentUserName }}
                     </p>
 
                     <p class="text-xs text-gray-500">
-                        Administrateur
+                        {{ currentUserRole }}
                     </p>
                 </div>
             </div>
