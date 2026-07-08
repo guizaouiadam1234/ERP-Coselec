@@ -483,10 +483,10 @@ onBeforeUnmount(() => {
 
 <template>
   <AppLayout>
-  <div class="w-full max-w-full mx-auto font-sans">
+  <div class="mx-auto flex h-full min-h-0 min-w-0 w-full max-w-full flex-col overflow-hidden font-sans">
     
     <!-- Top Header -->
-    <div class="flex flex-col border-b border-gray-200 pb-5 mb-6 bg-white p-4 rounded-xl shadow-xs gap-4">
+    <div class="mb-6 flex shrink-0 flex-col gap-4 rounded-xl border-b border-gray-200 bg-white p-4 pb-5 shadow-xs">
       <div class="flex items-center space-x-3">
         <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -518,8 +518,8 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Big Matrix Overview Card -->
-    <div class="bg-white border border-red-100 rounded-xl shadow-xs overflow-hidden">
-      <div ref="tableScrollRef" class="overflow-x-scroll overflow-y-auto pb-2 stock-table-scroll max-h-[68vh]">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-red-100 bg-white shadow-xs">
+      <div ref="tableScrollRef" class="stock-table-scroll min-h-0 flex-1 overflow-x-auto overflow-y-auto pb-2">
         <table ref="tableElementRef" class="w-max min-w-full text-left border-separate border-spacing-0" :style="{ minWidth: `${enforcedTableMinWidth}px` }">
           <thead>
             <!-- Double Layer Table Header Row -->
@@ -607,21 +607,6 @@ onBeforeUnmount(() => {
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <div class="px-4 pb-3 pt-2 border-t border-red-100 bg-white">
-        <div class="flex items-center gap-3">
-          <input
-            v-model.number="miniScrollPosition"
-            type="range"
-            min="0"
-            :max="miniScrollMax"
-            step="1"
-            :disabled="miniScrollMax === 0"
-            @input="handleMiniScrollInput"
-            class="mini-horizontal-scroll w-full"
-          />
-        </div>
       </div>
     </div>
   </div>

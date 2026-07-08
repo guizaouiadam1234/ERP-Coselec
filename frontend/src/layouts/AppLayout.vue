@@ -7,10 +7,10 @@ import Sidebar from '@/components/Sidebar.vue';
 	<div class="flex h-screen overflow-hidden">
 		<Sidebar />
 
-		<div class="flex-1 flex flex-col">
+		<div class="flex min-w-0 flex-1 flex-col">
 			<Navbar />
 
-			<main class="flex-1 overflow-y-auto bg-[#fff8f9] p-6">
+			<main class="flex min-w-0 flex-1 overflow-y-auto bg-[#fff8f9] p-6">
 				<slot />
 			</main>
 		</div>

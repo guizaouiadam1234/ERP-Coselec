@@ -92,15 +92,12 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
 import { RouterLink } from 'vue-router';
-import { useRouter } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { createTicket, type TicketCategory } from '@/services/tickets';
 
 const props = defineProps<{
   section: 'hr' | 'it' | 'facilities';
 }>();
-
-const router = useRouter();
 
 const sectionMeta = computed(() => {
   const map = {
@@ -187,8 +184,11 @@ const submitRequest = async () => {
       }
     });
 
-    window.alert('Demande créée avec succès.');
-    router.push({ name: 'tickets' });
+    form.subject = '';
+    form.description = '';
+    form.priority = 'Normal';
+    form.attachment = '';
+    window.alert('Demande envoyee.');
   } catch (error) {
     console.error('Erreur lors de la création de la demande', error);
     window.alert('Impossible de créer la demande pour le moment.');
