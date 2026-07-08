@@ -7,9 +7,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.tasks.hr_alerts import check_document_expirations
 
 
-#routers
+#hr routers
 from app.routers.employees import router as employees_router
 from app.routers.planning import router as planning_router
+from app.routers.contracts import router as contracts_router
+from app.routers.leaverequests import router as leave_requests_router
 ## stock routers
 from app.routers.stock.stocks import router as stocks_router
 from app.routers.stock.stockoperations import router as stock_operations_router
@@ -86,6 +88,8 @@ app.include_router(categories_router)
 app.include_router(planning_router)
 app.include_router(tickets_router)
 app.include_router(notifications_router)
+app.include_router(contracts_router)
+app.include_router(leave_requests_router)
 
 
 class LoginRequest(BaseModel):
