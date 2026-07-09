@@ -6,6 +6,7 @@ from app.models.ticket import Ticket
 from app.models.user import User
 from app.models.notification import NotificationType
 from fastapi import BackgroundTasks
+from app.services.workflow import validate_ticket_transition
 
 from app.schemas.ticket import (
     TicketCreate,
@@ -57,7 +58,6 @@ def get_tickets(
 ):
     return db.query(Ticket).all()
 
-
 @router.patch(
     "/{ticket_id}/status/",
     response_model=TicketResponse
@@ -87,7 +87,10 @@ def update_ticket_status(
             detail="Ticket not found"
         )
 
+    new_status_str = payload.status.value
+
     ticket.status = payload.status
+    
     db.commit()
     db.refresh(ticket)
 
@@ -95,13 +98,13 @@ def update_ticket_status(
         send_ticket_email,
         email_to=ticket.creator.email, 
         subject=f"Mise à jour du ticket: {ticket.title}", 
-        body=f"Le statut de votre demande est passé à : {ticket.status.value}"
+        body=f"Le statut de votre demande est passé à : {new_status_str}"
     )
 
     create_notification(
         db=db,
         user_id=current_user.id,
-        message=f"Ticket {ticket.id} passe a {ticket.status.value}",
+        message=f"Ticket {ticket.id} passe a {new_status_str}",
         type=NotificationType.INFO,
         reference_id=ticket.id
     )

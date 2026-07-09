@@ -121,27 +121,7 @@ const onDrop = async (targetStatus) => {
   isUpdatingStatus.value = true;
 
   try {
-    const token =
-      localStorage.getItem('access_token') ||
-      sessionStorage.getItem('access_token');
-
-    if (!token) {
-      alert('Session expirée, reconnecte-toi.');
-      onDragEnd();
-      return;
-    }
-
-    const response = await api.patch(
-      `/tickets/${ticket.id}/status`,
-      {
-        status: targetStatus
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
+    const response = await api.patch(`/tickets/${ticket.id}/status`, { status: targetStatus });
 
     const updatedTicket = response.data;
     tickets.value = tickets.value.map((item) =>
