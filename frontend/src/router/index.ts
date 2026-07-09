@@ -85,27 +85,6 @@ const router = createRouter({
   routes,
 });
 
-function isTokenExpired(token: string): boolean {
-  try {
-    const payloadBase64 = token.split(".")[1];
-    if (!payloadBase64) {
-      return true;
-    }
-
-    const payloadJson = atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(payloadJson) as { exp?: number };
-
-    if (!payload.exp) {
-      return false;
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp <= now;
-  } catch {
-    return true;
-  }
-}
-
 async function getActiveProfile() {
   const cached = getStoredProfile();
 
@@ -122,40 +101,37 @@ async function getActiveProfile() {
 
 
 router.beforeEach(async (to, from, next) => {
-  const rawToken =
-    localStorage.getItem("access_token") ||
-    sessionStorage.getItem("access_token");
-
-  const token = rawToken && !isTokenExpired(rawToken) ? rawToken : null;
-
-  if (rawToken && !token) {
-    localStorage.removeItem("access_token");
-    sessionStorage.removeItem("access_token");
-    clearStoredProfile();
-  }
-
   const isPublicRoute = to.path === "/login";
+  const profile = await getActiveProfile();
 
-  if (!isPublicRoute && !token) {
-    next("/login");
-  }
-  else if (to.path === "/login" && token) {
-    next("/home");
-  } else {
-    const requiredRoles = (to.meta.requiredRoles as string[] | undefined) || [];
-
-    if (requiredRoles.length > 0) {
-      const profile = await getActiveProfile();
-      const authorized = hasAnyRole(profile?.roles, requiredRoles);
-
-      if (!authorized) {
-        next("/home");
-        return;
-      }
+  if (isPublicRoute) {
+    if (profile) {
+      next("/home");
+      return;
     }
 
     next();
+    return;
   }
+
+  if (!profile) {
+    clearStoredProfile();
+    next("/login");
+    return;
+  }
+
+  const requiredRoles = (to.meta.requiredRoles as string[] | undefined) || [];
+
+  if (requiredRoles.length > 0) {
+    const authorized = hasAnyRole(profile.roles, requiredRoles);
+
+    if (!authorized) {
+      next("/home");
+      return;
+    }
+  }
+
+  next();
 });
 
 

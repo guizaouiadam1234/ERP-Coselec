@@ -11,7 +11,6 @@ const PROFILE_STORAGE_KEY = "erp_current_user";
 
 export function saveCurrentUserProfile(profile: CurrentUserProfile): void {
   const serialized = JSON.stringify(profile);
-
   localStorage.setItem(PROFILE_STORAGE_KEY, serialized);
   sessionStorage.setItem(PROFILE_STORAGE_KEY, serialized);
 }

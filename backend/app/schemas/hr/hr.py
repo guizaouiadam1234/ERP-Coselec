@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from datetime import date
 from typing import Optional
 from app.models.hr.document import DocumentCategory
@@ -44,7 +44,15 @@ class LeaveRequestBase(BaseModel):
     reason: Optional[str] = None
 
 class LeaveRequestCreate(LeaveRequestBase):
-    pass
+    employee_id: int
+    start_date: date
+    end_date: date
+
+    @model_validator(mode="after")
+    def check_dates(self) -> "LeaveRequestCreate":
+        if self.start_date > self.end_date:
+            raise ValueError("La date de début ne peut pas être postérieure à la date de fin.")
+        return self
 
 class LeaveRequestUpdate(BaseModel):
     leave_type: Optional[str] = None

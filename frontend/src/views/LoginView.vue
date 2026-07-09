@@ -27,19 +27,12 @@ async function handleSubmit() {
 	successMessage.value = "";
 
 	try {
-		const data = await login(username.value, password.value);
-
-		if (data?.access_token) {
-			const storage = rememberMe.value ? localStorage : sessionStorage;
-			storage.setItem("access_token", data.access_token);
-
-			await refreshCurrentUserProfile();
-		}
-
-		successMessage.value = "Connexion reussie. Bienvenue.";
-        console.log("Redirecting to home...");
-        router.push("/home");
-	} catch {
+		await login(username.value, password.value);
+		await refreshCurrentUserProfile();
+		successMessage.value = "Connexion reussie ! Redirection en cours...";
+		router.push("/home");
+	}
+	catch (error) {
 		errorMessage.value = "Connexion impossible. Verifiez vos informations.";
 	} finally {
 		loading.value = false;

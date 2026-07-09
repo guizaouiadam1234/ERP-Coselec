@@ -9,3 +9,12 @@ export async function login(username: string, password: string) {
     throw error;
   }
 }
+
+export async function logout() {
+  try {
+    await api.post("/logout");
+  } catch (error) {
+    console.error("Logout failed:", error);
+    throw error;
+  }
+}

@@ -12,6 +12,7 @@ import {
     refreshCurrentUserProfile,
     type CurrentUserProfile,
 } from "@/services/session";
+import { logout as logoutRequest } from "@/services/auth";
 
 const router = useRouter();
 const notifications = ref<NotificationItem[]>([]);
@@ -105,12 +106,17 @@ onBeforeUnmount(() => {
     window.removeEventListener("notifications:refresh", handleNotificationsRefresh);
 });
 
-function logout() {
-    localStorage.removeItem("access_token");
-    sessionStorage.removeItem("access_token");
-    clearStoredProfile();
-
-    router.push("/login");
+async function logout() {
+    try {
+        await logoutRequest();
+    } catch {
+        // Keep local cleanup even if backend logout fails.
+    } finally {
+        localStorage.removeItem("access_token");
+        sessionStorage.removeItem("access_token");
+        clearStoredProfile();
+        router.push("/login");
+    }
 }
 </script>
 

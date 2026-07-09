@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -13,7 +13,7 @@ from app.models.user import User
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BASE_DIR / ".env")
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -62,15 +62,27 @@ def create_access_token(data: dict):
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    access_token: str | None = Cookie(default=None, alias="access_token"),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db)
 ):
-    token = credentials.credentials
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"}
     )
+
+    token = access_token
+
+    # Backward compatibility: older cookies may store "Bearer <token>".
+    if token and token.lower().startswith("bearer "):
+        token = token.split(" ", 1)[1].strip()
+
+    # Also accept Authorization: Bearer <token> for non-cookie clients.
+    if not token and credentials is not None:
+        token = credentials.credentials
+
+    if not token:
+        raise credentials_exception
 
     try:
         payload = jwt.decode(
@@ -90,11 +102,10 @@ def get_current_user(
 
     user = db.query(User).filter(User.id == user_id).first()
 
-    if not user:
+    if user is None:
         raise credentials_exception
 
     return user
-
 
 def check_permission(required_permission: str):
     def dependency(current_user: User = Depends(get_current_user)):

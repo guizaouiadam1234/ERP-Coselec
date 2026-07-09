@@ -1,4 +1,5 @@
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,8 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.tasks.hr_alerts import check_document_expirations
 
+#schemas
+from app.schemas.register import RegisterRequest
 
 #hr routers
 from app.routers.employees import router as employees_router
@@ -116,10 +119,10 @@ def root():
     return {"message": "Welcome to the ERP API!"}
 
 @app.post("/register")
-def register_user(name: str, email: str, password: str, db: Session = Depends(get_db)):
-    hashed_password = hash_password(password)
-    user = User(name=name, email=email, hashed_password=hashed_password)
-    existing_user = db.query(User).filter(User.email == email).first()
+def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+    hashed_password = hash_password(payload.password)
+    user = User(name=payload.full_name, email=payload.email, hashed_password=hashed_password)
+    existing_user = db.query(User).filter(User.email == payload.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     db.add(user)
@@ -129,7 +132,7 @@ def register_user(name: str, email: str, password: str, db: Session = Depends(ge
     ensure_rbac_setup(db)
     assign_default_role(db, user)
 
-    if email.strip().lower() == "adam@adam.com":
+    if payload.email.strip().lower() == "adam@adam.com":
         assign_role_to_user(db, user, "Admin")
 
     create_notification(
@@ -178,10 +181,18 @@ def login(
         {"sub": str(user.id)}
     )
 
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
+    response = JSONResponse(
+        content = {"message" : "Login successful"})
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=3600,
+        expires=3600,
+        samesite="lax"
+    )
+    return response
+    
 
 @app.get("/me")
 def me(
@@ -193,3 +204,10 @@ def me(
         "email": current_user.email,
         "roles": [role.name for role in current_user.roles]
     }
+
+
+@app.post("/logout")
+def logout():
+    response = JSONResponse(content={"message": "Logout successful"})
+    response.delete_cookie(key="access_token", samesite="lax")
+    return response
