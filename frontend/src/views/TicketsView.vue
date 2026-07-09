@@ -9,12 +9,13 @@
         
       </header>
 
-      <div class="flex gap-8 items-start">
+      <div class="flex gap-8 w-375 items-start border-2 border-red-100">
         <div
           v-for="status in statuses"
           :key="status.value"
           class="flex-1 flex flex-col rounded-xl border border-transparent p-3 transition"
-          :class="dropTargetStatus === status.value ? 'border-red-200 bg-red-50/50' : ''"
+          :style="{height: columnHeight}"
+          :class="dropTargetStatus === status.value ? 'border-red-200 bg-red-100/75' : ''"
           @dragover.prevent="onDragOver(status.value)"
           @dragleave="onDragLeave"
           @drop="onDrop(status.value)"
@@ -55,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { api } from '@/services/api';
 import AppLayout from '@/layouts/AppLayout.vue';
 
@@ -135,6 +136,19 @@ const onDrop = async (targetStatus) => {
     onDragEnd();
   }
 };
+
+const maxTicketsInColumn = computed(() => {
+  return Math.max(
+    ...statuses.map(status => getTicketsByStatus(status.value).length)
+  );
+});
+
+const columnHeight = computed(() => {
+  const ticketHeight = 120;
+  const padding = 100;
+
+  return `${maxTicketsInColumn.value * ticketHeight + padding}px`;
+});
 
 onMounted(async () => {
   await loadTickets();
