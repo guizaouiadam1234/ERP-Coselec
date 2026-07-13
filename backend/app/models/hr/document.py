@@ -1,5 +1,6 @@
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Boolean, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Boolean, Enum, DateTime
+from datetime import datetime
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -22,3 +23,18 @@ class EmployeeDocument(Base):
     is_verified = Column(Boolean, default=False) 
 
     employee = relationship("Employee", back_populates="documents")
+
+class TaskDocument(Base):
+    __tablename__ = "task_documents"
+    #champs de base
+    id = Column(Integer, primary_key=True, nullable=False)
+    task_id = Column(Integer,ForeignKey("tasks.id"), nullable=False)
+    file_name = Column(String, nullable=False)
+    storage_path = Column(String, nullable=False)
+    mime_type = Column(String, nullable=True)
+
+    #champs temporels
+    uploaded_at = Column(DateTime, default = datetime.now)
+
+    #relationships
+    task = relationship("Task", back_populates="documents")

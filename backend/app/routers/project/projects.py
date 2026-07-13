@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db
-from app.models.project import Project
+from app.models.project.project import Project
 from app.models.stock.partner import Partner
-from app.schemas.project import ProjectCreate, ProjectResponse
+from app.schemas.project.project import ProjectCreate, ProjectResponse
 from app.auth import check_permission
 from typing import List
 

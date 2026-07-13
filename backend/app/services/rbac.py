@@ -41,7 +41,12 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "projects.read" : ("Projets - lecture", "Consulter les projets"),
     "projects.create" : ("Projets - creation", "Creer des projets"),
     "projects.update": ("Projets - mise a jour", "Modifier les projets"),
-    "projects.delete" : ("Projets - suppression", "Supprimer les projets")
+    "projects.delete" : ("Projets - suppression", "Supprimer les projets"),
+    "tasks.create" : ("Tâches - creation", "Creer les taches"),
+    "tasks.update" : ("Tâches - mise a jour", "Mettre a jour les taches"),
+    "tasks.delete" : ("Tâches - suppression", "Supprimer les tâches"),
+    "tasks.read" : ("Tâches - lecture", "Lire les tâches")
+
 }
 
 

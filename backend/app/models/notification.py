@@ -13,7 +13,7 @@ class Notification(Base):
     type = Column(String, nullable=False)
 
     is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     reference_id = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="notifications")

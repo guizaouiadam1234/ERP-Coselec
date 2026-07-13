@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date
 from typing import List, Optional
-from app.models.project import ProjectStatus
+from app.models.project.project import ProjectStatus
 from app.schemas.stock.partner import PartnerResponse
 
 class ProjectBase(BaseModel):
