@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, ForeignKey
+from sqlalchemy import Table, Column, Integer, ForeignKey, String
 from app.database import Base
 
 
@@ -15,4 +15,12 @@ role_permissions = Table(
     Base.metadata,
     Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
     Column("permission_id", Integer, ForeignKey("permissions.id"), primary_key=True)
+)
+
+project_partners = Table(
+    "project_partners",
+    Base.metadata,
+    Column("project_id", Integer, ForeignKey("projects.id"), primary_key=True),
+    Column("partner_id", Integer, ForeignKey("partners.id"), primary_key=True),
+    Column("role", String(50))
 )

@@ -38,6 +38,10 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "stock.update": ("Stock - mise a jour", "Modifier des donnees stock"),
     "stock.delete": ("Stock - suppression", "Supprimer des donnees stock"),
     "dashboard.read": ("Dashboard - lecture", "Consulter les indicateurs"),
+    "projects.read" : ("Projets - lecture", "Consulter les projets"),
+    "projects.create" : ("Projets - creation", "Creer des projets"),
+    "projects.update": ("Projets - mise a jour", "Modifier les projets"),
+    "projects.delete" : ("Projets - suppression", "Supprimer les projets")
 }
 
 

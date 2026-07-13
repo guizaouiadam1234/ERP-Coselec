@@ -29,6 +29,8 @@ from app.routers.stock.categories import router as categories_router
 from app.routers.tickets import router as tickets_router
 #notifications router
 from app.routers.notifications import router as notifications_router
+#projects router
+from app.routers.projects import router as projects_router
 
 from app.auth import (
     get_current_user,
@@ -95,6 +97,7 @@ app.include_router(notifications_router)
 app.include_router(contracts_router)
 app.include_router(leave_requests_router)
 app.include_router(documents_router)
+app.include_router(projects_router)
 
 class LoginRequest(BaseModel):
     email: str | None = None

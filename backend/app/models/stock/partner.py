@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy.orm import relationship
+from app.models.relations import project_partners
 
 from app.database import Base
 
@@ -19,3 +21,6 @@ class Partner(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+
+    #relationships
+    projects = relationship("Project",secondary=project_partners, back_populates="partners")
