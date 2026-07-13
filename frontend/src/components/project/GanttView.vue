@@ -1,4 +1,6 @@
 <template>
-    <h1>GANTTTT</h1>
+    <div class="bg-red-800">
+        <h2>test</h2>
+    </div>
 </template>
 
