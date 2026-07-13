@@ -29,6 +29,9 @@ const canViewStock = computed(() => {
 const canViewDocuments = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "Direction"]);
 });
+const canViewProjects = computed(() => {
+  return hasAnyRole(roles.value, ["Admin"]);
+})
 
 onMounted(async () => {
   try {
@@ -154,6 +157,12 @@ onMounted(async () => {
           label="Canvas"
           :collapsed="collapsed"
         />
+      </div>
+
+      <div v-if="canViewProjects">
+        <h2 class = "text-xs uppercase text-red-200 mb-2">Projets</h2>
+        <SidebarItem to="/projects" icon="work" label="Projects" :collapsed="collapsed"></SidebarItem>
+
       </div>
 
       <!-- Documents -->

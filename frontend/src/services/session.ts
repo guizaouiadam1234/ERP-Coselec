@@ -48,6 +48,8 @@ export function hasAnyRole(userRoles: string[] | undefined, acceptedRoles: strin
   return acceptedRoles.some((role) => userRoles.includes(role));
 }
 
+
+
 export async function refreshCurrentUserProfile(): Promise<CurrentUserProfile> {
   const response = await api.get("/me");
   const data = response.data as CurrentUserProfile;

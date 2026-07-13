@@ -1,0 +1,74 @@
+<template>
+  <AppLayout>
+    <div class="flex flex-col w-full gap-6 p-4">
+      
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center space-x-4">
+          <span class="material-symbols-outlined text-[#d10f2f]">work</span>
+          <h2 class="text-2xl font-bold text-[#b30c27]">Projet à gérer</h2>
+          <select v-model="selectedProject" class="border-2 w-max h-10 rounded-lg px-2">
+             <option v-for="p in projects" :key="p.id" :value="p.nom">
+               {{ p.nom }}
+             </option>
+          </select>
+        </div>
+
+        <div class="flex border border-red-500 rounded-lg overflow-hidden">
+          <button 
+            @click="currentView = 'Table'" 
+            :class="{'bg-red-500 text-white': currentView === 'Table'}" 
+            class="px-4 py-2 hover:bg-red-50">
+            Kanban
+          </button>
+          <button 
+            @click="currentView = 'Gantt'" 
+            :class="{'bg-red-500 text-white': currentView === 'Gantt'}" 
+            class="px-4 py-2 hover:bg-red-50">
+            Gantt
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <GanttView v-if="currentView==='Gantt'"></GanttView>
+        <TaskView v-if="currentView==='Table'"></TaskView>
+      </div>
+      
+    </div>
+  </AppLayout>
+</template>
+
+<script setup lang="ts">
+import { projectService, taskService } from '@/services/projects';
+import AppLayout from "@/layouts/AppLayout.vue";
+import GanttView from '@/components/project/GanttView.vue';
+import TaskView from '@/components/project/TaskView.vue';
+import {shallowRef, ref, onMounted} from 'vue';
+
+interface Project {
+    id: number;
+    nom: string;
+}
+const tasks = ref([]);
+
+const loadTasks = async () => {
+    const project = projects.value.find(p => p.nom === selectedProject.value);
+    if (project) {
+        const response = await taskService.getTasksByProject(project.id);
+        tasks.value = response.data;
+    }
+};
+
+const projects = ref<Project[]>([]);
+
+onMounted(async ()=>{
+    try{
+        const response = await projectService.getAllProjects();
+    projects.value = response.data;
+    }catch(error){
+        console.error("Erreur de chargement des projets.")
+    }
+});
+const currentView = shallowRef('Table');
+const selectedProject = ref<string | null>(null);
+</script>

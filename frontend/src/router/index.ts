@@ -76,6 +76,12 @@ const routes = [
     name: "request-form",
     component: () => import("../views/RequestFormView.vue"),
     props: true
+  },
+  {
+    path: "/projects",
+    name: "projects",
+    component: () => import("@/views/project/ProjectView.vue"),
+    props:true
   }
 
 ];
