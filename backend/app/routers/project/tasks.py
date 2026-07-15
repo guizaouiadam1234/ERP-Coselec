@@ -13,7 +13,7 @@ router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 def get_tasks_by_project(project_id:int, db : Session=Depends(get_db), user_permissions=Depends(check_permission("tasks.read"))):
     tasks = (db.query(Task).filter(Task.project_id==project_id).all())
     if len(tasks) ==0:
-        raise HTTPException(status_code=status.HTTP_404, detail="Aucune tâche n'a été retrouvée")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune tâche n'a été retrouvée")
     return tasks
 
 

@@ -53,23 +53,29 @@ const columns = ref(
   }))
 );
 
-// Populate columns from props.tasks
 watch(
   () => props.tasks,
   (newTasks) => {
     const grouped: Record<string, any[]> = {};
+    
     newTasks.forEach(t => {
-      const st = t.status || 'TODO';
+      // Normalize incoming string: if backend sends "Revue", map it to "REVIEW"
+      let st = t.status || 'TODO';
+      if (st === 'A faire') st = 'TODO';
+      if (st === 'En cours') st = 'IN_PROGRESS';
+      if (st === 'Revue') st = 'REVIEW';
+      if (st === 'Terminée') st = 'DONE';
+
       if (!grouped[st]) grouped[st] = [];
-      grouped[st].push(t);
+      grouped[st]?.push(t);
     });
+
     columns.value.forEach(col => {
       col.tasks = grouped[col.status] || [];
     });
   },
   { immediate: true, deep: true }
 );
-
 // Called when a drag ends
 const onDragEnd = (newStatus: string) => {
   const column = columns.value.find(c => c.status === newStatus);
