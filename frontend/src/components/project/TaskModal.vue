@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { marked } from 'marked'
 import { taskService } from '@/services/projects'
 
 interface TaskDocument {
@@ -28,6 +29,8 @@ const taskDocuments = ref<TaskDocument[]>([])
 const loadingTaskDocuments = ref(false)
 const documentActionId = ref<number | null>(null)
 const documentError = ref('')
+const descriptionMode = ref<'edit' | 'preview'>('edit')
+const renderedDescription = computed(() => marked.parse(localTask.value.description || '') as string)
 
 // Fonctions pour le drag & drop
 const onDragOver = (e: DragEvent) => {
@@ -55,6 +58,8 @@ watch(() => props.task, (newTask) => {
     ...newTask,
     task_metadata: newTask.task_metadata ? JSON.stringify(newTask.task_metadata, null, 2) : ''
   }
+
+  descriptionMode.value = 'edit'
 
   void loadTaskDocuments()
 }, { deep: true })
@@ -272,12 +277,44 @@ const handleSave = () => {
 
         <!-- Ligne 3 : Description -->
         <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1">Description</label>
-          <textarea 
-            class="w-full border border-gray-300 rounded-md px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-30 resize-y"
+          <div class="mb-1 flex items-center justify-between">
+            <label class="block text-sm font-medium text-gray-900">Description (Markdown)</label>
+            <div class="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-xs">
+              <button
+                type="button"
+                class="rounded px-2 py-1"
+                :class="descriptionMode === 'edit' ? 'bg-white text-red-700 shadow-sm' : 'text-gray-600'"
+                @click="descriptionMode = 'edit'"
+              >
+                Edition
+              </button>
+              <button
+                type="button"
+                class="rounded px-2 py-1"
+                :class="descriptionMode === 'preview' ? 'bg-white text-red-700 shadow-sm' : 'text-gray-600'"
+                @click="descriptionMode = 'preview'"
+              >
+                Apercu
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            v-if="descriptionMode === 'edit'"
+            class="w-full border border-gray-300 rounded-md px-4 py-3 text-gray-900 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-30 resize-y"
             v-model="localTask.description"
-            placeholder="Détails de la tâche..."
+            placeholder="# Titre\n\n- Point 1\n- Point 2\n\n**Texte important**"
           ></textarea>
+
+          <div
+            v-else
+            class="markdown-preview rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 min-h-30"
+            v-html="renderedDescription"
+          />
+
+          <p class="mt-1 text-xs text-gray-500">
+            Astuce: utilise #, ##, -, **gras**, *italique*, [lien](https://...).
+          </p>
         </div>
 
         <!-- Ligne 4 : Métadonnées -->
@@ -386,3 +423,94 @@ const handleSave = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.markdown-preview {
+  line-height: 1.6;
+}
+
+.markdown-preview :deep(h1) {
+  margin: 0.2rem 0 0.8rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.markdown-preview :deep(h2) {
+  margin: 1rem 0 0.65rem;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.markdown-preview :deep(h3) {
+  margin: 0.9rem 0 0.55rem;
+  font-size: 1.1rem;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.markdown-preview :deep(p) {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.markdown-preview :deep(ul),
+.markdown-preview :deep(ol) {
+  margin: 0.5rem 0 0.75rem 1.2rem;
+}
+
+.markdown-preview :deep(li) {
+  margin: 0.2rem 0;
+}
+
+.markdown-preview :deep(ul) {
+  list-style: disc;
+}
+
+.markdown-preview :deep(ol) {
+  list-style: decimal;
+}
+
+.markdown-preview :deep(strong) {
+  font-weight: 700;
+}
+
+.markdown-preview :deep(em) {
+  font-style: italic;
+}
+
+.markdown-preview :deep(a) {
+  color: #b91c1c;
+  text-decoration: underline;
+}
+
+.markdown-preview :deep(blockquote) {
+  margin: 0.7rem 0;
+  border-left: 3px solid #fecaca;
+  padding-left: 0.75rem;
+  color: #4b5563;
+}
+
+.markdown-preview :deep(code) {
+  border-radius: 0.3rem;
+  background: #f3f4f6;
+  padding: 0.08rem 0.32rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  font-size: 0.85rem;
+}
+
+.markdown-preview :deep(pre) {
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border-radius: 0.45rem;
+  background: #111827;
+  padding: 0.75rem;
+}
+
+.markdown-preview :deep(pre code) {
+  background: transparent;
+  color: #f9fafb;
+  padding: 0;
+}
+</style>
