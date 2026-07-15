@@ -176,7 +176,7 @@
 import { onMounted, ref } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
-import { getEmployees } from "@/services/employees";
+import { employeeService } from "@/services/employees";
 
 // IMPORT DE SOUS-COMPOSANTS
 import EmployeeContracts from "@/components/employees/EmployeeContracts.vue";
@@ -241,6 +241,7 @@ const getStatusClass = (status: string) => {
 };
 
 onMounted(async () => {
-  employees.value = await getEmployees();
+  const response = await employeeService.getAllEmployees();
+  employees.value = response.data;
 });
 </script>

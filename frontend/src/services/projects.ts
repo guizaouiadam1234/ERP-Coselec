@@ -14,7 +14,34 @@ export const taskService = {
   
   // Gestion des tâches globales (déplacement ou modif transversale)
   updateTask: (projectId:number,taskId: number, data: any) => api.patch(`/projects/${projectId}/tasks/${taskId}`, data),
-  deleteTask: (taskId: number) => api.delete(`/tasks/${taskId}`)
+  deleteTask: (projectId: number, taskId: number) => api.delete(`/projects/${projectId}/tasks/${taskId}`),
+
+  uploadTaskDocuments: (projectId: number, taskId: number, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    return api.post(`/projects/${projectId}/tasks/${taskId}/documents`, formData);
+  },
+
+  getTaskDocuments: (projectId: number, taskId: number) =>
+    api.get(`/projects/${projectId}/tasks/${taskId}/documents`),
+
+  deleteTaskDocument: (projectId: number, documentId: number) =>
+    api.delete(`/projects/${projectId}/tasks/documents/${documentId}`),
+
+  downloadTaskDocument: async (projectId: number, documentId: number, fallbackFileName: string) => {
+    const response = await api.get(`/projects/${projectId}/tasks/documents/${documentId}/download`, {
+      responseType: 'blob',
+    });
+
+    const blobUrl = window.URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fallbackFileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(blobUrl);
+  }
 };
 
 export const updateProjectTask = async (projectId: number, taskId: number, taskData: any) => {

@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import check_permission, get_current_user
-from app.schemas.project.task import TaskResponse, TaskUpdate, TaskCreate
+from app.schemas.project.task import TaskDocumentResponse, TaskResponse, TaskUpdate, TaskCreate
 from app.models.project.project import Project
 from app.models.employee import Employee
 from app.models.project.task import Task, TaskStatus
+from app.models.hr.document import TaskDocument
+from app.services.storage import save_file_locally
 router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
 #GET
@@ -66,6 +72,115 @@ def update_task(project_id: int, task_id: int, task_data: TaskUpdate, db: Sessio
     db.commit()
     db.refresh(task)
     return task
+
+
+@router.get("/{task_id}/documents", response_model=list[TaskDocumentResponse], status_code=status.HTTP_200_OK)
+def get_task_documents(
+    project_id: int,
+    task_id: int,
+    db: Session = Depends(get_db),
+    user_permissions=Depends(check_permission("tasks.read"))
+):
+    task = db.query(Task).filter(Task.id == task_id, Task.project_id == project_id).first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche non trouvée dans ce projet")
+
+    return db.query(TaskDocument).filter(TaskDocument.task_id == task_id).all()
+
+
+@router.post("/{task_id}/documents", response_model=list[TaskDocumentResponse], status_code=status.HTTP_201_CREATED)
+def upload_task_documents(
+    project_id: int,
+    task_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    user_permissions=Depends(check_permission("tasks.update"))
+):
+    task = db.query(Task).filter(Task.id == task_id, Task.project_id == project_id).first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche non trouvée dans ce projet")
+
+    if not files:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucun fichier fourni")
+
+    created_docs: list[TaskDocument] = []
+    for file in files:
+        if not file.filename:
+            continue
+
+        file_extension = file.filename.split(".")[-1] if "." in file.filename else "bin"
+        unique_filename = f"task_{task_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+
+        try:
+            storage_path = save_file_locally(file, unique_filename)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(exc)}")
+
+        new_doc = TaskDocument(
+            task_id=task_id,
+            file_name=file.filename,
+            storage_path=storage_path,
+            mime_type=file.content_type
+        )
+        db.add(new_doc)
+        created_docs.append(new_doc)
+
+    if not created_docs:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucun fichier valide fourni")
+
+    db.commit()
+    for doc in created_docs:
+        db.refresh(doc)
+
+    return created_docs
+
+
+@router.get("/documents/{document_id}/download")
+def download_task_document(
+    project_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+    user_permissions=Depends(check_permission("tasks.read"))
+):
+    doc = (
+        db.query(TaskDocument)
+        .join(Task, TaskDocument.task_id == Task.id)
+        .filter(TaskDocument.id == document_id, Task.project_id == project_id)
+        .first()
+    )
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document de tâche introuvable")
+
+    if not os.path.isfile(doc.storage_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fichier introuvable")
+
+    return FileResponse(
+        path=doc.storage_path,
+        media_type=doc.mime_type or "application/octet-stream",
+        filename=doc.file_name,
+    )
+
+
+@router.delete("/documents/{document_id}", status_code=status.HTTP_200_OK)
+def delete_task_document(
+    project_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+    user_permissions=Depends(check_permission("tasks.update"))
+):
+    doc = (
+        db.query(TaskDocument)
+        .join(Task, TaskDocument.task_id == Task.id)
+        .filter(TaskDocument.id == document_id, Task.project_id == project_id)
+        .first()
+    )
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document de tâche introuvable")
+
+    db.delete(doc)
+    db.commit()
+
+    return {"message": "Document de tâche supprimé"}
 
 #DELETE
 @router.delete("/{task_id}", status_code=status.HTTP_200_OK)

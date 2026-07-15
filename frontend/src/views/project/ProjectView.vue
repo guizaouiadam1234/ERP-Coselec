@@ -39,10 +39,11 @@
     @update-task="handleTaskUpdate" 
   />
   <KanbanView 
-    v-else-if="currentView === 'Kanban'" 
-    key="kanban-board-layout" 
-    :tasks="tasks" 
-    @update-task="handleTaskUpdate"
+  v-else-if="currentView === 'Kanban'" 
+  key="kanban-board-layout" 
+  :tasks="tasks" 
+  :employees-list="employees"
+  @update-task="handleTaskUpdate"
   />
   <div v-else key="empty-fallback-layout" class="text-gray-400 text-center py-8">
     Sélectionnez une vue pour afficher les tâches du projet.
@@ -55,16 +56,25 @@
 </template>
 <script setup lang="ts">
 import { projectService, taskService } from '@/services/projects';
+import { employeeService } from '@/services/employees';
 import AppLayout from "@/layouts/AppLayout.vue";
 import GanttView from '@/components/project/GanttView.vue';
 import KanbanView from '@/components/project/KanbanView.vue';
-import {shallowRef, ref, onMounted} from 'vue';
+import { shallowRef, ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
 
 interface Project {
     id: number;
     nom: string;
 }
+
 const tasks = ref([]);
+const projects = ref<Project[]>([]);
+const employees = ref([]);
+const currentView = shallowRef('Table');
+const selectedProject = ref<string | null>(null);
 
 const loadTasks = async () => {
     const project = projects.value.find(p => p.nom === selectedProject.value);
@@ -77,32 +87,70 @@ const loadTasks = async () => {
             tasks.value = [];
         }
     } else {
-        tasks.value = []; // Clear tasks if no valid project is selected
+        tasks.value = [];
     }
 };
-const handleTaskUpdate = async (taskId: number, data: any) => {
+
+const handleTaskUpdate = async (taskId: number, rawData: any) => {
   try {
-    const project = projects.value.find(p => p.nom === selectedProject.value);
-    if (project) {
-      await taskService.updateTask(project.id, taskId, data);
-      // Refresh tasks to reflect changes
-      await loadTasks();
+    if (!rawData) return;
+
+    const data = rawData.payload ?? rawData;
+    const files: File[] = Array.isArray(rawData.files) ? rawData.files : [];
+
+    const cleanData: any = {};
+    
+    if (data.title) cleanData.title = data.title;
+    if (data.status) cleanData.status = data.status;
+    if (data.priority) cleanData.priority = data.priority;
+    if (data.description) cleanData.description = data.description;
+    
+    if (data.assignee_id !== undefined) {
+      cleanData.assignee_id = data.assignee_id || null;
     }
-  } catch (error) {
-    console.error('Failed to update task', error);
+    
+    if (data.project_id !== undefined) {
+      cleanData.project_id = data.project_id;
+    }
+
+    let start = data.start_date || data.date_debut;
+    let due = data.due_date || data.date_fin;
+
+    if (start) {
+      cleanData.start_date = typeof start === 'string' ? start.split(' ')[0] : start;
+    }
+
+    if (due) {
+      cleanData.due_date = typeof due === 'string' ? due.split(' ')[0] : due;
+    }
+
+    const activeProject = projects.value.find(p => p.nom === selectedProject.value);
+    const projectId = activeProject ? activeProject.id : route.params.id;
+
+    if (!projectId) return;
+
+    await taskService.updateTask(Number(projectId), taskId, cleanData);
+
+    if (files.length > 0) {
+      await taskService.uploadTaskDocuments(Number(projectId), taskId, files);
+    }
+
+    await loadTasks();
+    
+  } catch (error: any) {
+    console.error("Failed to update task", error);
   }
 };
 
-const projects = ref<Project[]>([]);
-
-onMounted(async ()=>{
-    try{
-        const response = await projectService.getAllProjects();
-    projects.value = response.data;
-    }catch(error){
-        console.error("Erreur de chargement des projets.")
+onMounted(async () => {
+    try {
+        const projectResponse = await projectService.getAllProjects();
+        projects.value = projectResponse.data;
+        
+        const empResponse = await employeeService.getAllEmployees();
+        employees.value = empResponse.data || [];
+    } catch(error) {
+        console.error("Erreur de chargement des données initiales de la vue :", error);
     }
 });
-const currentView = shallowRef('Table');
-const selectedProject = ref<string | null>(null);
 </script>

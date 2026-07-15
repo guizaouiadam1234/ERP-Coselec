@@ -48,3 +48,16 @@ class TaskUpdate(BaseModel):
     due_date : date | None = None
     assignee_id : int | None = None
 
+
+class TaskDocumentResponse(BaseModel):
+    id: int
+    task_id: int
+    file_name: str
+    storage_path: str
+    mime_type: str | None = None
+    uploaded_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
+

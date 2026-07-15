@@ -79,7 +79,7 @@ const ganttBars = computed<GanttBarObject[]>(() => {
         label: task.title || 'Sans titre',
         hasHandles: true,
         style: {
-          background: task.status === 'Terminée' || task.status === 'DONE' ? '#15803d' : task.status === 'En cours' || task.status === 'IN_PROGRESS' ? '#ea580c' : '#b91c1c',
+          background: task.status === 'A faire' || task.status == 'TO DO'? "#6577c2" : task.status === 'Terminée' || task.status === 'DONE' ? '#15803d' : task.status === 'En cours' || task.status === 'IN_PROGRESS' ? '#ea580c' : '#b91c1c',
           borderRadius: '8px',
           color: '#fff',
         },

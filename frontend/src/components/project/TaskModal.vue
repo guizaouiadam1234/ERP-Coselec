@@ -1,12 +1,33 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { taskService } from '@/services/projects'
+
+interface TaskDocument {
+  id: number
+  task_id: number
+  file_name: string
+  storage_path: string
+  mime_type?: string
+  uploaded_at: string
+}
 
 const props = defineProps<{
-  task: any
+  task: any,
+  employees : Array<{
+    id: number,
+    nom?: string,
+    prenom?: string,
+    first_name?: string,
+    last_name?: string
+  }>
 }>()
 
 const emit = defineEmits(['close', 'save'])
 const isDragging = ref(false)
+const taskDocuments = ref<TaskDocument[]>([])
+const loadingTaskDocuments = ref(false)
+const documentActionId = ref<number | null>(null)
+const documentError = ref('')
 
 // Fonctions pour le drag & drop
 const onDragOver = (e: DragEvent) => {
@@ -34,6 +55,8 @@ watch(() => props.task, (newTask) => {
     ...newTask,
     task_metadata: newTask.task_metadata ? JSON.stringify(newTask.task_metadata, null, 2) : ''
   }
+
+  void loadTaskDocuments()
 }, { deep: true })
 
 // Gestion des documents (simili-MinIO)
@@ -49,6 +72,104 @@ const handleFileUpload = (event: Event) => {
 const removeFile = (index: number) => {
   uploadedFiles.value.splice(index, 1)
 }
+
+const getEmployeeLabel = (emp: {
+  id: number,
+  nom?: string,
+  prenom?: string,
+  first_name?: string,
+  last_name?: string
+}) => {
+  const lastName = emp.nom || emp.last_name || ''
+  const firstName = emp.prenom || emp.first_name || ''
+  const fullName = `${lastName} ${firstName}`.trim()
+
+  return fullName || `Employe n°${emp.id}`
+}
+
+const loadTaskDocuments = async () => {
+  const taskId = props.task?.id
+  const projectId = props.task?.project_id
+
+  taskDocuments.value = []
+  documentError.value = ''
+
+  if (!taskId || !projectId) return
+
+  try {
+    loadingTaskDocuments.value = true
+    const response = await taskService.getTaskDocuments(projectId, taskId)
+    taskDocuments.value = response.data || []
+  } catch (error: any) {
+    console.error('Erreur lors du chargement des documents de tâche', error)
+
+    const status = error?.response?.status
+    const detail = error?.response?.data?.detail
+
+    if (status === 404 && detail === 'Not Found') {
+      documentError.value = 'Route API des documents indisponible. Redémarre le backend pour charger les nouvelles routes.'
+      return
+    }
+
+    if (status === 404 && typeof detail === 'string') {
+      documentError.value = detail
+      return
+    }
+
+    if (status === 403) {
+      documentError.value = 'Vous n\'avez pas la permission de lire les documents de tâche.'
+      return
+    }
+
+    if (typeof detail === 'string' && detail.trim().length > 0) {
+      documentError.value = detail
+      return
+    }
+
+    documentError.value = 'Impossible de charger les documents existants.'
+  } finally {
+    loadingTaskDocuments.value = false
+  }
+}
+
+const downloadTaskDocument = async (doc: TaskDocument) => {
+  const projectId = props.task?.project_id
+  if (!projectId) return
+
+  try {
+    documentActionId.value = doc.id
+    documentError.value = ''
+    await taskService.downloadTaskDocument(projectId, doc.id, doc.file_name)
+  } catch (error) {
+    console.error('Erreur lors du téléchargement du document', error)
+    documentError.value = 'Téléchargement impossible pour ce document.'
+  } finally {
+    documentActionId.value = null
+  }
+}
+
+const deleteTaskDocument = async (doc: TaskDocument) => {
+  const projectId = props.task?.project_id
+  if (!projectId) return
+
+  if (!confirm('Voulez-vous vraiment supprimer ce document ?')) {
+    return
+  }
+
+  try {
+    documentActionId.value = doc.id
+    documentError.value = ''
+    await taskService.deleteTaskDocument(projectId, doc.id)
+    taskDocuments.value = taskDocuments.value.filter((d) => d.id !== doc.id)
+  } catch (error) {
+    console.error('Erreur lors de la suppression du document', error)
+    documentError.value = 'Suppression impossible pour ce document.'
+  } finally {
+    documentActionId.value = null
+  }
+}
+
+void loadTaskDocuments()
 
 const handleSave = () => {
   // On prépare le payload propre pour éviter les erreurs 422
@@ -137,14 +258,16 @@ const handleSave = () => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-900 mb-1">ID de l'employé assigné</label>
-            <input 
-              type="number"
-              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              v-model="localTask.assignee_id"
-              placeholder="Ex: 42"
-            >
-          </div>
+  <label class="block text-sm font-medium text-gray-900 mb-1">Employé assigné</label>
+  <select 
+    class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white transition-shadow"
+    v-model="localTask.assignee_id"
+  >
+    <option v-for="emp in employees" :key="emp.id" :value="emp.id">
+  {{ getEmployeeLabel(emp) }}
+</option>
+  </select>
+</div>
         </div>
 
         <!-- Ligne 3 : Description -->
@@ -170,6 +293,38 @@ const handleSave = () => {
         <!-- Ligne 5 : Documents (Setup MinIO) -->
         <div>
           <label class="block text-sm font-medium text-gray-900 mb-2">Documents joints</label>
+
+          <p v-if="documentError" class="mb-2 text-xs text-red-600">{{ documentError }}</p>
+
+          <div v-if="loadingTaskDocuments" class="mb-3 text-xs text-gray-500">
+            Chargement des documents existants...
+          </div>
+
+          <ul v-else-if="taskDocuments.length > 0" class="mb-3 border border-gray-200 rounded-md divide-y divide-gray-200 bg-white">
+            <li
+              v-for="doc in taskDocuments"
+              :key="doc.id"
+              class="pl-3 pr-4 py-3 flex items-center justify-between text-sm"
+            >
+              <button
+                type="button"
+                class="min-w-0 flex-1 text-left truncate text-gray-900 hover:text-red-600"
+                :disabled="documentActionId === doc.id"
+                @click="downloadTaskDocument(doc)"
+                :title="`Télécharger ${doc.file_name}`"
+              >
+                {{ doc.file_name }}
+              </button>
+              <button
+                type="button"
+                class="ml-4 shrink-0 font-medium text-red-600 hover:text-red-500 disabled:text-gray-400"
+                :disabled="documentActionId === doc.id"
+                @click="deleteTaskDocument(doc)"
+              >
+                {{ documentActionId === doc.id ? '...' : 'Supprimer' }}
+              </button>
+            </li>
+          </ul>
           
           <!-- Zone de dépôt -->
           <div 

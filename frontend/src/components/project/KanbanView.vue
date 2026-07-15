@@ -11,44 +11,80 @@
         group="tasks"
         class="task-list"
         item-key="id"
-        @end="onDragEnd(column.status)"
+        @change="onColumnChange($event, column.status)"
       >
         <template #item="{ element: task }">
           <div class="task-card">
             <p>{{ task.title }}</p>
+            <div class="actions-menu-container">
+                <button class="btn-dots" @click.stop="toggleMenu(task.id)">⋮</button>
+                <div v-if="activeMenuId === task.id" class="dropdown-menu">
+                  <button @click="openEditModal(task)">Modifier</button>
+                  <button class="delete-action" @click="emitDelete(task.id)">Supprimer</button>
+                </div>
+              </div>
             <small>{{ task.priority }}</small>
           </div>
         </template>
       </draggable>
     </div>
+    <TaskModal 
+  v-if="isModalOpen" 
+  :task="editingTask" 
+  :employees="employees"
+  @close="closeModal" 
+  @save="saveTaskChanges" 
+/>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import draggable from 'vuedraggable';
+import TaskModal from './TaskModal.vue';
 
 const props = defineProps<{
   tasks: any[];
+  // Reçoit la liste globale pour alimenter les selects de la modale
+  employeesList?: any[];
+  projectsList?: any[];
 }>();
 
 const emit = defineEmits<{
   (e: 'update-task', taskId: number, data: any): void;
+  (e: 'delete-task', taskId: number): void;
 }>();
 
-// Map frontend labels to backend status values
-const statusMap = {
-  'A faire': 'TODO',
-  'En cours': 'IN_PROGRESS',
-  'Revue': 'REVIEW',
-  'Terminée': 'DONE'
+// Listes pour alimenter les choix de l'utilisateur
+const employees = ref<any[]>(props.employeesList || []);
+const projects = ref<any[]>(props.projectsList || []);
+
+const activeMenuId = ref<number | null>(null);
+const isModalOpen = ref(false);
+const editingTask = ref<any>({});
+
+const statusMap: Record<string, string> = {
+  TODO: 'A faire',
+  IN_PROGRESS: 'En cours',
+  REVIEW: 'Revue',
+  DONE: 'Terminée',
+  ARCHIVED: 'Archivée',
+  'A faire': 'A faire',
+  'En cours': 'En cours',
+  Revue: 'Revue',
+  'Terminée': 'Terminée',
+  'Archivée': 'Archivée'
 };
 
-// Define columns with labels and a tasks array
+const normalizeStatus = (status?: string) => {
+  if (!status) return 'A faire';
+  return statusMap[status] || status;
+};
+
 const columns = ref(
-  Object.entries(statusMap).map(([label, status]) => ({
+  ['A faire', 'En cours', 'Revue', 'Terminée'].map((status) => ({
     status,
-    label,
+    label: status,
     tasks: [] as any[]
   }))
 );
@@ -57,14 +93,8 @@ watch(
   () => props.tasks,
   (newTasks) => {
     const grouped: Record<string, any[]> = {};
-    
     newTasks.forEach(t => {
-      // Normalize incoming string: if backend sends "Revue", map it to "REVIEW"
-      let st = t.status || 'TODO';
-      if (st === 'A faire') st = 'TODO';
-      if (st === 'En cours') st = 'IN_PROGRESS';
-      if (st === 'Revue') st = 'REVIEW';
-      if (st === 'Terminée') st = 'DONE';
+      const st = normalizeStatus(t.status);
 
       if (!grouped[st]) grouped[st] = [];
       grouped[st]?.push(t);
@@ -76,17 +106,73 @@ watch(
   },
   { immediate: true, deep: true }
 );
-// Called when a drag ends
-const onDragEnd = (newStatus: string) => {
-  const column = columns.value.find(c => c.status === newStatus);
-  if (!column || column.tasks.length === 0) return;
 
-  // The moved task is the last one in the list (because draggable appends)
-  const moved = column.tasks[column.tasks.length - 1];
-  if (!moved || moved.status === newStatus) return;
+// Menu d'actions
+const toggleMenu = (taskId: number) => {
+  activeMenuId.value = activeMenuId.value === taskId ? null : taskId;
+};
 
-  // Emit update so parent can save to API
-  emit('update-task', moved.id, { status: newStatus });
+const closeAllMenus = () => {
+  activeMenuId.value = null;
+};
+
+onMounted(() => {
+  window.addEventListener('click', closeAllMenus);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('click', closeAllMenus);
+});
+
+// Actions CRUD Émission
+const emitDelete = (taskId: number) => {
+  if (confirm("Êtes-vous sûr de vouloir supprimer (archiver) cette tâche ?")) {
+    emit('delete-task', taskId);
+  }
+  closeAllMenus();
+};
+
+// Gestion de la modale
+const openEditModal = (task: any) => {
+  // On crée l'objet en faisant correspondre les clés du backend 
+  // avec ce que les v-model de ton formulaire utilisent
+  editingTask.value = { 
+    id: task.id,
+    title: task.title || '',
+    description: task.description || '',
+    priority: task.priority || 'Moyenne',
+    status: normalizeStatus(task.status),
+    
+    // Correction des clés de dates :
+    // Si task.due_date existe (format YYYY-MM-DD), on le prend, sinon on regarde date_fin
+    due_date: task.due_date || task.date_fin || '', 
+    start_date: task.start_date || task.date_debut || '',
+    
+    assignee_id: task.assignee_id || null,
+    project_id: task.project_id
+  };
+  
+  isModalOpen.value = true;
+  closeAllMenus();
+};
+const closeModal = () => {
+  isModalOpen.value = false;
+  editingTask.value = {};
+};
+
+const saveTaskChanges = (eventData: { payload: any, files: File[] }) => {
+  // Transmet les modifications + fichiers au composant parent
+  emit('update-task', editingTask.value.id, eventData);
+  closeModal();
+};
+
+const onColumnChange = (event: any, targetStatus: string) => {
+  // On met à jour le statut uniquement quand une tâche est ajoutée à une nouvelle colonne.
+  const movedTask = event?.added?.element;
+  if (!movedTask) return;
+
+  if (normalizeStatus(movedTask.status) === targetStatus) return;
+  emit('update-task', movedTask.id, { status: targetStatus });
 };
 </script>
 
@@ -119,13 +205,138 @@ const onDragEnd = (newStatus: string) => {
   margin-bottom: 0.5rem;
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  cursor: grab;
 }
-.task-card p {
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.task-header p {
   margin: 0 0 0.25rem 0;
   font-weight: 500;
 }
-.task-card small {
+.btn-dots {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
   color: #6c757d;
+  padding: 0 0.25rem;
+}
+.actions-menu-container {
+  position: relative;
+}
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+}
+.dropdown-menu button {
+  background: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.dropdown-menu button:hover {
+  background: #f8f9fa;
+}
+.dropdown-menu .delete-action {
+  color: #dc3545;
+}
+.dropdown-menu .delete-action:hover {
+  background: #f8d7da;
+}
+.task-assignee {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.avatar {
+  background: #0d6efd;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+/* Styles Modale */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-content {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+.form-row .form-group {
+  flex: 1;
+}
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+input, select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+.btn-cancel {
+  background: #e9ecef;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-save {
+  background: #0d6efd;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
 }
 </style>
