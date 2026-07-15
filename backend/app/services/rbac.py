@@ -18,6 +18,7 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "tickets.read": ("Tickets - lecture", "Consulter les tickets"),
     "tickets.create": ("Tickets - creation", "Creer des tickets"),
     "tickets.update": ("Tickets - mise a jour", "Mettre a jour les tickets"),
+    "tickets.delete": ("Tickets - suppressions", "Supprimer des tickets"),
     "notifications.read": ("Notifications - lecture", "Consulter ses notifications"),
     "notifications.update": ("Notifications - mise a jour", "Marquer les notifications"),
     "hr.read": ("Planning RH - lecture", "Consulter le planning RH"),

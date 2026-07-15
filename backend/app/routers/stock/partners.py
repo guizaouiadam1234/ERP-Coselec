@@ -1,7 +1,8 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException
+    HTTPException,
+    status
 )
 
 from sqlalchemy.orm import Session
@@ -27,7 +28,6 @@ router = APIRouter(
 @router.get("/", response_model=list[PartnerResponse])
 def get_partners(
     _: None = Depends(check_permission("stock.read")),
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     return db.query(Partner).all()
@@ -37,7 +37,7 @@ def get_partners(
 def get_partner(
     partner_id: int,
     _: None = Depends(check_permission("stock.read")),
-    current_user: User = Depends(get_current_user),
+    
     db: Session = Depends(get_db)
 ):
     partner = (
@@ -63,7 +63,7 @@ def get_partner(
 def create_partner(
     partner: PartnerCreate,
     _: None = Depends(check_permission("stock.create")),
-    current_user: User = Depends(get_current_user),
+    
     db: Session = Depends(get_db)
 ):
     existing = (
@@ -97,7 +97,7 @@ def update_partner(
     partner_id: int,
     partner: PartnerUpdate,
     _: None = Depends(check_permission("stock.update")),
-    current_user: User = Depends(get_current_user),
+    
     db: Session = Depends(get_db)
 ):
     existing = (
@@ -145,7 +145,7 @@ def update_partner(
 def delete_partner(
     partner_id: int,
     _: None = Depends(check_permission("stock.delete")),
-    current_user: User = Depends(get_current_user),
+    
     db: Session = Depends(get_db)
 ):
     partner = (
@@ -166,3 +166,27 @@ def delete_partner(
     return {
         "message": "Partner deleted successfully"
     }
+
+@router.delete("/{partner_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_partner(
+    partner_id: int,
+    _: None = Depends(check_permission("stock.delete")),
+    db: Session = Depends(get_db)
+):
+    partner = db.get(Partner, partner_id)
+
+    if not partner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Partenaire non trouvé"
+        )
+
+    # VERROU DE SÉCURITÉ : On bloque la suppression si le partenaire est lié à des projets
+    if hasattr(partner, 'projects') and partner.projects:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Impossible de supprimer ce partenaire car il est rattaché à un ou plusieurs projets actifs."
+        )
+
+    db.delete(partner)
+    db.commit()

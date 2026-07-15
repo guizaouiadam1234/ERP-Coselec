@@ -25,3 +25,18 @@ class ProjectResponse(ProjectBase):
     partners: List[PartnerResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+class ProjectUpdate(BaseModel):
+    code: Optional[str] = None
+    nom: Optional[str] = None
+
+    date_debut_estimee: Optional[date] = None
+    date_fin_estimee: Optional[date] = None
+    date_fin_prevue: Optional[date] = None
+
+    status: Optional[ProjectStatus] = None
+
+    date_debut_reelle: Optional[date] = None
+    date_fin_reelle: Optional[date] = None
+
+    budget_engage: Optional[float] = None

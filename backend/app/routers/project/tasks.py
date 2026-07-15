@@ -5,7 +5,7 @@ from app.auth import check_permission, get_current_user
 from app.schemas.project.task import TaskResponse, TaskUpdate, TaskCreate
 from app.models.project.project import Project
 from app.models.employee import Employee
-from app.models.project.task import Task
+from app.models.project.task import Task, TaskStatus
 router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
 #GET
@@ -66,3 +66,18 @@ def update_task(project_id: int, task_id: int, task_data: TaskUpdate, db: Sessio
     db.commit()
     db.refresh(task)
     return task
+
+#DELETE
+@router.delete("/{task_id}", status_code=status.HTTP_200_OK)
+def delete_task(
+    task_id : int,
+    project_id: int,
+    db : Session = Depends(get_db),
+    user_permissions= Depends(check_permission("tasks.delete"))
+):
+    task = db.query(Task).filter(Task.id==task_id, Task.project_id == project_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Tâche non trouvée dans ce projet")
+    task.status=TaskStatus.ARCHIVED
+    db.commit()
+    return {"message": "Tâche archivée avec succès"}

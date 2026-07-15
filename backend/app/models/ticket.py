@@ -14,6 +14,7 @@ class TicketStatus(enum.Enum):
     IN_PROGRESS = "In Progress"
     RESOLVED = "Resolved"
     CLOSED = "Closed"
+    ARCHIVED= "Archived"
 
 
 class Ticket(Base):

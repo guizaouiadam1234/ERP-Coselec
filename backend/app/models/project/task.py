@@ -15,6 +15,7 @@ class TaskStatus(str, enum.Enum):
     IN_PROGRESS = "En cours"
     REVIEW = "Revue"
     DONE = "Terminée"
+    ARCHIVED = "Archivée"
 
 class Task(Base):
     __tablename__ = "tasks"
