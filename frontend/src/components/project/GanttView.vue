@@ -2,7 +2,7 @@
 <template>
   <div class="gantt-container w-full overflow-x-auto bg-white p-4 rounded-lg shadow-sm border">
     <g-gantt-chart
-      v-if="ganttBars.length > 0"
+      v-if="ganttRows.length > 0"
       :chart-start="chartStart"
       :chart-end="chartEnd"
       precision="day"
@@ -13,7 +13,12 @@
       width="100%"
       @dragend-bar="onDragEndBar"
     >
-      <g-gantt-row label="Tâches" :bars="ganttBars" />
+      <g-gantt-row
+        v-for="(row, index) in ganttRows"
+        :key="`gantt-row-${index}`"
+        :label="row.label"
+        :bars="row.bars"
+      />
     </g-gantt-chart>
     <div v-else class="text-center text-gray-400 py-6">
       Aucune tâche planifiée à afficher dans le diagramme.
@@ -88,9 +93,48 @@ const ganttBars = computed<GanttBarObject[]>(() => {
   });
 });
 
+const ganttRows = computed(() => {
+  if (!ganttBars.value.length) return [] as Array<{ label: string; bars: GanttBarObject[] }>;
+
+  // Cascade layout: place each task in the first row where it does not overlap.
+  const sortedBars = [...ganttBars.value].sort((a, b) => {
+    const aStart = new Date(String(a.start_date).replace(' 00:00', '')).getTime();
+    const bStart = new Date(String(b.start_date).replace(' 00:00', '')).getTime();
+    return aStart - bStart;
+  });
+
+  const rowLastEnd: number[] = [];
+  const rows: Array<{ label: string; bars: GanttBarObject[] }> = [];
+
+  for (const bar of sortedBars) {
+    const startTime = new Date(String(bar.start_date).replace(' 00:00', '')).getTime();
+    const endTime = new Date(String(bar.due_date).replace(' 00:00', '')).getTime();
+
+    let targetRow = rowLastEnd.findIndex((lastEnd) => startTime >= lastEnd);
+
+    if (targetRow === -1) {
+      targetRow = rows.length;
+      rows.push({
+        label: `Cascade ${targetRow + 1}`,
+        bars: [],
+      });
+      rowLastEnd.push(endTime);
+    } else {
+      rowLastEnd[targetRow] = endTime;
+    }
+
+    const row = rows[targetRow];
+    if (row) {
+      row.bars.push(bar);
+    }
+  }
+
+  return rows;
+});
+
 const chartStart = computed(() => {
   if (!ganttBars.value.length) return todayStr;
-  const times = ganttBars.value.map(b => new Date(b.start_date.replace(' 00:00', '')).getTime());
+  const times = ganttBars.value.map(b => new Date(String(b.start_date).replace(' 00:00', '')).getTime());
   const minTime = Math.min(...times);
   return formatDateString(new Date(minTime));
 });
@@ -113,10 +157,19 @@ const chartEnd = computed(() => {
   return formatDateString(targetEnd);
 });
 
-const onDragEndBar = ({ bar }: { bar: GanttBarObject }) => {
-  emit('update-task', Number(bar.ganttBarConfig.id), {
-    start_date: bar.start_date,
-    due_date: bar.due_date,
+const onDragEndBar = (payload: { bar?: GanttBarObject; movedBars?: Map<GanttBarObject, { oldStart: unknown; oldEnd: unknown }> }) => {
+  const moved = payload?.movedBars instanceof Map && payload.movedBars.size > 0
+    ? Array.from(payload.movedBars.keys())
+    : payload?.bar
+      ? [payload.bar]
+      : [];
+
+  moved.forEach((bar) => {
+    emit('update-task', Number(bar.ganttBarConfig.id), {
+      start_date: bar.start_date,
+      due_date: bar.due_date,
+      source: 'gantt',
+    });
   });
 };
 </script>

@@ -12,6 +12,12 @@
                  {{ p.nom }}
                </option>
             </select>
+            <button class ="ml-5 bg-[#d10f2f] border-2 border-[#b30c27] rounded-lg w-40 h-10 text-white flex items-center"
+            v-if="selectedProject"
+            @click="openTaskCreateModal"
+            >
+              <span class="material-symbols-outlined">add</span>
+              <span class="ml-2">Nouvelle tâche</span></button>
           </div>
 
           <div class="flex border border-red-500 rounded-lg overflow-hidden">
@@ -48,8 +54,14 @@
   <div v-else key="empty-fallback-layout" class="text-gray-400 text-center py-8">
     Sélectionnez une vue pour afficher les tâches du projet.
   </div>
-</div>
-        
+  </div>
+    <TaskCreateModal
+      v-if="isTaskCreateModalOpen"
+      :open="isTaskCreateModalOpen"
+      :employees="employees"
+      @close="closeTaskCreateModal"
+      @create="handleTaskCreate"
+    />
       </div>
     </AppLayout>
   </div>
@@ -62,7 +74,7 @@ import GanttView from '@/components/project/GanttView.vue';
 import KanbanView from '@/components/project/KanbanView.vue';
 import { shallowRef, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-
+import TaskCreateModal from "@/components/project/TaskCreateModal.vue";
 const route = useRoute();
 
 interface Project {
@@ -75,10 +87,57 @@ const projects = ref<Project[]>([]);
 const employees = ref([]);
 const currentView = shallowRef('Table');
 const selectedProject = ref<string | null>(null);
+const isTaskCreateModalOpen = ref(false);
+
+
+const openTaskCreateModal = () => {
+  isTaskCreateModalOpen.value = true;
+};
+
+const closeTaskCreateModal = () => {
+  isTaskCreateModalOpen.value = false;
+};
+
+const resolveActiveProjectId = (): number | null => {
+  const activeProject = projects.value.find((p) => p.nom === selectedProject.value);
+
+  if (activeProject?.id) {
+    return Number(activeProject.id);
+  }
+
+  const routeId = Number(route.params.id);
+  return Number.isFinite(routeId) && routeId > 0 ? routeId : null;
+};
+
+const handleTaskCreate = async (rawData: any) => {
+  try {
+    const projectId = resolveActiveProjectId();
+    if (!projectId) {
+      console.error('Aucun projet actif pour creer la tache');
+      return;
+    }
+
+    const data = rawData?.payload ?? {};
+    const files: File[] = Array.isArray(rawData?.files) ? rawData.files : [];
+
+    const response = await taskService.createTask(projectId, data);
+    const taskId = response?.data?.id;
+
+    if (taskId && files.length > 0) {
+      await taskService.uploadTaskDocuments(projectId, Number(taskId), files);
+    }
+
+    isTaskCreateModalOpen.value = false;
+    await loadTasks();
+  } catch (error: any) {
+    console.error('Erreur lors de la creation de la tache', error);
+  }
+};
+
 
 const loadTasks = async () => {
-    const project = projects.value.find(p => p.nom === selectedProject.value);
-    if (project) {
+  const project = projects.value.find(p => p.nom === selectedProject.value);
+  if (project) {
         try {
             const response = await taskService.getTasksByProject(project.id);
             tasks.value = response.data || [];
@@ -89,6 +148,61 @@ const loadTasks = async () => {
     } else {
         tasks.value = [];
     }
+};
+
+const toIsoDateOnly = (value: unknown): string | null => {
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    // Accept values like "YYYY-MM-DD 00:00" and keep only the date part.
+    const trimmed = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      return trimmed.slice(0, 10);
+    }
+
+    // Accept values like DD/MM/YYYY from localized pickers.
+    const ddmmyyyy = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (ddmmyyyy) {
+      const [, dd, mm, yyyy] = ddmmyyyy;
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+
+    return null;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  // Dayjs-like objects returned by gantt libs.
+  if (typeof value === 'object' && value !== null) {
+    const maybeAny = value as any;
+
+    if (typeof maybeAny.format === 'function') {
+      const formatted = maybeAny.format('YYYY-MM-DD');
+      if (typeof formatted === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(formatted)) {
+        return formatted;
+      }
+    }
+
+    if (typeof maybeAny.toDate === 'function') {
+      const asDate = maybeAny.toDate();
+      if (asDate instanceof Date && !Number.isNaN(asDate.getTime())) {
+        return asDate.toISOString().slice(0, 10);
+      }
+    }
+
+    if (maybeAny.$d instanceof Date && !Number.isNaN(maybeAny.$d.getTime())) {
+      return maybeAny.$d.toISOString().slice(0, 10);
+    }
+  }
+
+  return null;
 };
 
 const handleTaskUpdate = async (taskId: number, rawData: any) => {
@@ -113,21 +227,28 @@ const handleTaskUpdate = async (taskId: number, rawData: any) => {
       cleanData.project_id = data.project_id;
     }
 
-    let start = data.start_date || data.date_debut;
-    let due = data.due_date || data.date_fin;
+    const start = data.start_date || data.date_debut;
+    const due = data.due_date || data.date_fin;
 
-    if (start) {
-      cleanData.start_date = typeof start === 'string' ? start.split(' ')[0] : start;
+    const normalizedStart = toIsoDateOnly(start);
+    const normalizedDue = toIsoDateOnly(due);
+
+    if (normalizedStart) {
+      cleanData.start_date = normalizedStart;
     }
 
-    if (due) {
-      cleanData.due_date = typeof due === 'string' ? due.split(' ')[0] : due;
+    if (normalizedDue) {
+      cleanData.due_date = normalizedDue;
     }
 
     const activeProject = projects.value.find(p => p.nom === selectedProject.value);
     const projectId = activeProject ? activeProject.id : route.params.id;
 
     if (!projectId) return;
+
+    if (Object.keys(cleanData).length === 0) {
+      return;
+    }
 
     await taskService.updateTask(Number(projectId), taskId, cleanData);
 
