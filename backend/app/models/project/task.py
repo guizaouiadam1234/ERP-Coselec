@@ -29,6 +29,7 @@ class Task(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     due_date = Column(Date, nullable=False)
+    start_date = Column(Date, nullable=True)
 
     #attributs de relation
     author_id = Column(Integer, ForeignKey("users.id"), nullable= False)

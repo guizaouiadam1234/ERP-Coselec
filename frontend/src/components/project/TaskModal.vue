@@ -1,0 +1,233 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+
+const props = defineProps<{
+  task: any
+}>()
+
+const emit = defineEmits(['close', 'save'])
+const isDragging = ref(false)
+
+// Fonctions pour le drag & drop
+const onDragOver = (e: DragEvent) => {
+  isDragging.value = true
+}
+
+const onDragLeave = (e: DragEvent) => {
+  isDragging.value = false
+}
+
+const onDrop = (e: DragEvent) => {
+  isDragging.value = false
+  if (e.dataTransfer && e.dataTransfer.files) {
+    uploadedFiles.value.push(...Array.from(e.dataTransfer.files))
+  }
+}
+// On crée une copie locale. Pour la métadonnée JSON, on la convertit en chaîne pour le textarea.
+const localTask = ref({
+  ...props.task,
+  task_metadata: props.task.task_metadata ? JSON.stringify(props.task.task_metadata, null, 2) : ''
+})
+
+watch(() => props.task, (newTask) => {
+  localTask.value = {
+    ...newTask,
+    task_metadata: newTask.task_metadata ? JSON.stringify(newTask.task_metadata, null, 2) : ''
+  }
+}, { deep: true })
+
+// Gestion des documents (simili-MinIO)
+const uploadedFiles = ref<File[]>([])
+
+const handleFileUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    uploadedFiles.value.push(...Array.from(target.files))
+  }
+}
+
+const removeFile = (index: number) => {
+  uploadedFiles.value.splice(index, 1)
+}
+
+const handleSave = () => {
+  // On prépare le payload propre pour éviter les erreurs 422
+  const payload = {
+    title: localTask.value.title,
+    description: localTask.value.description,
+    status: localTask.value.status,
+    priority: localTask.value.priority,
+    due_date: localTask.value.due_date,
+    assignee_id: localTask.value.assignee_id,
+    // On essaie de parser le JSON, sinon on l'envoie en null ou on gère l'erreur
+    task_metadata: localTask.value.task_metadata ? JSON.parse(localTask.value.task_metadata) : null,
+  }
+  
+  // Tu pourras ajouter la logique d'upload MinIO ici ou dans le parent via `uploadedFiles.value`
+  emit('save', { payload, files: uploadedFiles.value })
+}
+</script>
+
+<template>
+  <div
+    class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4"
+    @click.self="emit('close')"
+  >
+    <!-- Conteneur principal : max-w-3xl pour avoir de la place, max-h-[90vh] pour scroller si l'écran est petit -->
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"> 
+      
+      <!-- En-tête -->
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-red-50/50">
+        <h3 class="text-xl font-semibold text-red-900">Modifier la tâche</h3>
+        <button @click="emit('close')" class="text-gray-400 hover:text-red-600 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Corps (scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1">
+        
+        <!-- Ligne 1 : Titre -->
+        <div>
+          <label class="block text-sm font-medium text-gray-900 mb-1">Titre de la tâche</label>
+          <input 
+            class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-shadow" 
+            v-model="localTask.title"
+            placeholder="Ex: Mise à jour du composant d'authentification"
+          >
+        </div>
+
+        <!-- Ligne 2 : Grille (Statut, Priorité, Date, Assigné) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-900 mb-1">Statut</label>
+            <select 
+              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+              v-model="localTask.status"
+            >
+              <option value="A faire">À faire</option>
+              <option value="En cours">En cours</option>
+              <option value="Revue">Revue</option>
+              <option value="Terminée">Terminée</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-900 mb-1">Priorité</label>
+            <select 
+              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+              v-model="localTask.priority"
+            >
+              <option value="Basse">Basse</option>
+              <option value="Moyenne">Moyenne</option>
+              <option value="Haute">Haute</option>
+              <option value="Urgente">Urgente</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-900 mb-1">Date d'échéance (Due Date)</label>
+            <input 
+              type="date"
+              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              v-model="localTask.due_date"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-900 mb-1">ID de l'employé assigné</label>
+            <input 
+              type="number"
+              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              v-model="localTask.assignee_id"
+              placeholder="Ex: 42"
+            >
+          </div>
+        </div>
+
+        <!-- Ligne 3 : Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-900 mb-1">Description</label>
+          <textarea 
+            class="w-full border border-gray-300 rounded-md px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-30 resize-y"
+            v-model="localTask.description"
+            placeholder="Détails de la tâche..."
+          ></textarea>
+        </div>
+
+        <!-- Ligne 4 : Métadonnées -->
+        <div>
+          <label class="block text-sm font-medium text-gray-900 mb-1">Métadonnées (Format JSON)</label>
+          <textarea 
+            class="w-full border border-gray-300 rounded-md px-4 py-3 text-gray-600 font-mono text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-25"
+            v-model="localTask.task_metadata"
+            placeholder='{ "cle": "valeur" }'
+          ></textarea>
+        </div>
+
+        <!-- Ligne 5 : Documents (Setup MinIO) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-900 mb-2">Documents joints</label>
+          
+          <!-- Zone de dépôt -->
+          <div 
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors group"
+            :class="isDragging ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-red-400 bg-gray-50'"
+            @dragover.prevent="onDragOver"
+            @dragleave.prevent="onDragLeave"
+            @drop.prevent="onDrop"
+          >
+            <div class="space-y-1 text-center pointer-events-none">
+              <svg 
+                class="mx-auto h-12 w-12 transition-colors" 
+                :class="isDragging ? 'text-red-500' : 'text-gray-400 group-hover:text-red-500'"
+                stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"
+              >
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <div class="flex text-sm text-gray-600 justify-center pointer-events-auto">
+                <label for="file-upload" class="relative cursor-pointer rounded-md font-medium text-red-600 hover:text-red-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-red-500">
+                  <span>Téléverser un fichier</span>
+                  <input id="file-upload" name="file-upload" type="file" multiple class="sr-only" @change="handleFileUpload">
+                </label>
+                <p class="pl-1">ou glisser-déposer</p>
+              </div>
+              <p class="text-xs text-gray-500">PDF, PNG, JPG, DOCX</p>
+            </div>
+          </div>
+
+          <!-- Liste des fichiers sélectionnés -->
+          <ul v-if="uploadedFiles.length > 0" class="mt-4 border border-gray-200 rounded-md divide-y divide-gray-200">
+            <li v-for="(file, index) in uploadedFiles" :key="index" class="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
+              <div class="w-0 flex-1 flex items-center">
+                <span class="ml-2 flex-1 w-0 truncate text-gray-900">{{ file.name }}</span>
+              </div>
+              <div class="ml-4 shrink-0">
+                <button @click="removeFile(index)" class="font-medium text-red-600 hover:text-red-500">Retirer</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Pied de page (Boutons) -->
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+        <button
+          class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+          @click="emit('close')"
+        >
+          Annuler
+        </button>
+        <button
+          class="px-5 py-2.5 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-sm transition-colors"
+          @click="handleSave"
+        >
+          Enregistrer les modifications
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

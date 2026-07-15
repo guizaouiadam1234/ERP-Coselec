@@ -1,8 +1,22 @@
 import axios, { AxiosHeaders } from "axios";
 import { clearStoredProfile } from "./session";
 
+function resolveApiBaseUrl(): string {
+  const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/+$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+
+  return "http://localhost:8000";
+}
+
 const api = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: resolveApiBaseUrl(),
   withCredentials: true,
 });
 

@@ -9,6 +9,7 @@ class TaskBase(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority
     due_date: date
+    start_date: date | None = None  
     assignee_id: int | None = None
     project_id: int | None = None
 
@@ -43,6 +44,7 @@ class TaskUpdate(BaseModel):
     status : TaskStatus | None = None
     priority : TaskPriority | None = None
 
+    start_date: date | None = None
     due_date : date | None = None
     assignee_id : int | None = None
 

@@ -30,8 +30,12 @@
       </div>
 
       <div>
-        <GanttView v-if="currentView==='Gantt'"></GanttView>
-        <TaskView v-if="currentView==='Table'" :tasks="tasks"></TaskView>
+        <GanttView v-if="currentView==='Gantt'" :tasks="tasks"></GanttView>
+        <KanbanView 
+  v-if="currentView === 'Kanban'" 
+  :tasks="tasks" 
+  @update-task="handleTaskUpdate"
+/>
       </div>
       
     </div>
@@ -42,7 +46,7 @@
 import { projectService, taskService } from '@/services/projects';
 import AppLayout from "@/layouts/AppLayout.vue";
 import GanttView from '@/components/project/GanttView.vue';
-import TaskView from '@/components/project/TaskView.vue';
+import KanbanView from '@/components/project/KanbanView.vue';
 import {shallowRef, ref, onMounted} from 'vue';
 
 interface Project {
@@ -57,6 +61,18 @@ const loadTasks = async () => {
         const response = await taskService.getTasksByProject(project.id);
         tasks.value = response.data;
     }
+};
+const handleTaskUpdate = async (taskId: number, data: any) => {
+  try {
+    const project = projects.value.find(p => p.nom === selectedProject.value);
+    if (project) {
+      await taskService.updateTask(project.id, taskId, data);
+      // Refresh tasks to reflect changes
+      await loadTasks();
+    }
+  } catch (error) {
+    console.error('Failed to update task', error);
+  }
 };
 
 const projects = ref<Project[]>([]);

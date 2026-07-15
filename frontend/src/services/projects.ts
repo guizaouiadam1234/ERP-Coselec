@@ -13,6 +13,12 @@ export const taskService = {
   createTask: (projectId: number, data: any) => api.post(`/projects/${projectId}/tasks/`, data),
   
   // Gestion des tâches globales (déplacement ou modif transversale)
-  updateTask: (taskId: number, data: any) => api.patch(`/tasks/${taskId}`, data),
+  updateTask: (projectId:number,taskId: number, data: any) => api.patch(`/projects/${projectId}/tasks/${taskId}`, data),
   deleteTask: (taskId: number) => api.delete(`/tasks/${taskId}`)
 };
+
+export const updateProjectTask = async (projectId: number, taskId: number, taskData: any) => {
+  // On utilise api.patch et on intègre le projectId dans la route
+  const response = await api.patch(`/projects/${projectId}/tasks/${taskId}`, taskData);
+  return response.data;
+}
