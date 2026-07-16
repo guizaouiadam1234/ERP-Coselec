@@ -167,13 +167,16 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "dashboard.read",
         },
     },
-    "Finance / Budget": {
+    "Finance": {
         "description": "Suivi financier et budgetaire",
         "permissions": {
             "dashboard.read",
             "stock.read",
             "notifications.read",
             "fuel_requests.read",
+            "fuel_requests.create",
+            "fuel_requests.update",
+            "fuel_requests.delete",
             "fuel_requests.validate_finance",
         },
     },

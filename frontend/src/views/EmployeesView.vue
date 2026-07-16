@@ -90,6 +90,115 @@
         </div>
       </main>
 
+      <!-- Modal Nouvel Employé -->
+      <div v-if="showCreateModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
+          <div class="px-6 py-4 bg-[#b30c27] text-white flex justify-between items-center">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+              <span class="material-symbols-outlined">person_add</span>
+              Nouvel Employé
+            </h2>
+            <button @click="showCreateModal = false" class="hover:bg-[#d10f2f] p-1 rounded-full transition">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          
+          <form @submit.prevent="submitEmployee" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                <input 
+                  type="text" 
+                  v-model="form.first_name" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                <input 
+                  type="text" 
+                  v-model="form.last_name" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input 
+                  type="email" 
+                  v-model="form.email" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                <input 
+                  type="text" 
+                  v-model="form.phone" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
+                <input 
+                  type="text" 
+                  v-model="form.matricule" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Poste</label>
+                <input 
+                  type="text" 
+                  v-model="form.position" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Département</label>
+                <select 
+                  v-model="form.department_id" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                >
+                  <option value="" disabled>Sélectionner un département</option>
+                  <option v-for="dep in departments" :key="dep.id" :value="dep.id">
+                    {{ dep.name }}
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                <select 
+                  v-model="form.status" 
+                  required
+                  class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+                >
+                  <option value="CDI">CDI</option>
+                  <option value="CDD">CDD</option>
+                  <option value="STAGIAIRE">Stagiaire</option>
+                  <option value="PRESTATAIRE">Prestataire</option>
+                  <option value="INACTIF">Inactif</option>
+                </select>
+              </div>
+            </div>
+            <div class="mt-8 flex justify-end gap-3 pt-4 border-t">
+              <button type="button" @click="showCreateModal = false" class="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-xl transition">
+                Annuler
+              </button>
+              <button type="submit" class="px-6 py-2 bg-[#d10f2f] text-white hover:bg-[#97091f] rounded-xl shadow-lg transition">
+                Créer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div 
         v-if="isSlideOverOpen" 
         @click="closeSlideOver"
@@ -177,6 +286,7 @@ import { onMounted, ref } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import { employeeService } from "@/services/employees";
+import { api } from "@/services/api";
 
 // IMPORT DE SOUS-COMPOSANTS
 import EmployeeContracts from "@/components/employees/EmployeeContracts.vue";
@@ -195,6 +305,43 @@ interface Employee {
 
 const showCreateModal = ref(false);
 const employees = ref<Employee[]>([]);
+const departments = ref<any[]>([]);
+
+const form = ref({
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  matricule: '',
+  position: '',
+  department_id: '',
+  status: 'CDI'
+});
+
+async function submitEmployee() {
+  try {
+    await api.post('/employees/', form.value);
+    showCreateModal.value = false;
+    // Reset form
+    form.value = {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      matricule: '',
+      position: '',
+      department_id: '',
+      status: 'CDI'
+    };
+    
+    // Refresh list
+    const response = await employeeService.getAllEmployees();
+    employees.value = response.data;
+  } catch (e) {
+    console.error("Error creating employee", e);
+    alert("Erreur lors de la création de l'employé");
+  }
+}
 
 // --- GESTION DU VOLET LATÉRAL (SLIDE-OVER) ---
 const isSlideOverOpen = ref(false);
@@ -241,7 +388,15 @@ const getStatusClass = (status: string) => {
 };
 
 onMounted(async () => {
-  const response = await employeeService.getAllEmployees();
-  employees.value = response.data;
+  try {
+    const [empRes, depRes] = await Promise.all([
+      employeeService.getAllEmployees(),
+      api.get('/departments/')
+    ]);
+    employees.value = empRes.data;
+    departments.value = depRes.data;
+  } catch (e) {
+    console.error("Error loading data", e);
+  }
 });
 </script>

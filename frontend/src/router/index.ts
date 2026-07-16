@@ -42,21 +42,21 @@ const routes = [
     path: "/stock/movement",
     component: () => import("../views/Stock/StockMovementView.vue"),
     meta: {
-      requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
+      requiredRoles: ["Admin", "Stock / Logistique", "Direction", "Finance"],
     },
   },
   {
     path: "/stock",
     component: () => import("../views/Stock/StockOverviewView.vue"),
     meta: {
-      requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
+      requiredRoles: ["Admin", "Stock / Logistique", "Direction", "Finance"],
     },
   },
   {
     path: "/stock/canvas",
     component: () => import("../views/Stock/StockCanvasView.vue"),
     meta: {
-      requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
+      requiredRoles: ["Admin", "Stock / Logistique", "Direction", "Finance"],
     },
   },
   // requests boards
@@ -70,7 +70,7 @@ const routes = [
     path: "/facility-requests",
     name: "facility-requests",
     component: () => import("../views/requests/FacilityRequestsView.vue"),
-    meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction"] }
+    meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction", "Finance"] }
   },
   {
     path: "/fuel-requests",

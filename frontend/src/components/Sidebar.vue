@@ -23,11 +23,11 @@ const canViewHr = computed(() => {
 });
 
 const canViewStock = computed(() => {
-  return hasAnyRole(roles.value, ["Admin", "Stock / Logistique", "Direction"]);
+  return hasAnyRole(roles.value, ["Admin", "Stock / Logistique", "Direction", "Finance"]);
 });
 
 const canViewDocuments = computed(() => {
-  return hasAnyRole(roles.value, ["Admin", "Direction"]);
+  return hasAnyRole(roles.value, ["Admin", "Direction", "Finance"]);
 });
 const canViewProjects = computed(() => {
   return hasAnyRole(roles.value, ["Admin"]);
@@ -38,7 +38,7 @@ const canViewItRequests = computed(() => {
 });
 
 const canViewFacilityRequests = computed(() => {
-  return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction"]);
+  return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction", "Finance"]);
 });
 
 const canViewFuelRequests = computed(() => {

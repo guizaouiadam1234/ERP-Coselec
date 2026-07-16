@@ -89,6 +89,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 from app.routers.caisse import router as caisse_router
+from app.routers.departments import router as departments_router
 
 app.include_router(employees_router)
 app.include_router(stocks_router)
@@ -111,6 +112,7 @@ app.include_router(tasks_router)
 app.include_router(auth_router)
 app.include_router(fuel_requests_router)
 app.include_router(caisse_router)
+app.include_router(departments_router)
 
 
 raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "")
