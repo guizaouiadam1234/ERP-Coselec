@@ -7,6 +7,7 @@ export interface EmployeeDocument {
   file_name: string;
   storage_path: string;
   mime_type: string | null;
+  numero: string | null;
   expiry_date: string | null;
   is_verified: boolean;
 }
@@ -19,10 +20,14 @@ export const documentService = {
   },
 
   // Uploader un nouveau document (utilisation de FormData)
-  async upload(employeeId: number, file: File, category: string, expiryDate?: string): Promise<EmployeeDocument> {
+  async upload(employeeId: number, file: File, category: string, numero?: string, expiryDate?: string): Promise<EmployeeDocument> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('category', category);
+    
+    if (numero) {
+      formData.append('numero', numero);
+    }
     
     if (expiryDate) {
       formData.append('expiry_date', expiryDate);

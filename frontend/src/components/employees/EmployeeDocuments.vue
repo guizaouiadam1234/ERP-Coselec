@@ -19,6 +19,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 // État du formulaire
 const form = ref({
   category: 'Identité',
+  numero: '',
   expiry_date: ''
 });
 const selectedFile = ref<File | null>(null);
@@ -65,12 +66,13 @@ const handleSubmit = async () => {
       props.employeeId,
       selectedFile.value,
       form.value.category,
+      form.value.numero || undefined,
       form.value.expiry_date || undefined
     );
 
     // Réinitialiser le formulaire
     showForm.value = false;
-    form.value = { category: 'Identité', expiry_date: '' };
+    form.value = { category: 'Identité', numero: '', expiry_date: '' };
     selectedFile.value = null;
     if (fileInput.value) fileInput.value.value = ''; // Vider l'input visuel
     
@@ -165,6 +167,10 @@ const getCategoryIcon = (category: string) => {
             </select>
           </div>
           <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Numéro (obligatoire pour Identité)</label>
+            <input type="text" v-model="form.numero" :required="form.category === 'Identité'" class="w-full border border-red-200 rounded-lg p-2 bg-white text-gray-700 focus:border-red-300 focus:ring-2 focus:ring-red-100 outline-none" placeholder="Ex: N° Passeport..." />
+          </div>
+          <div>
             <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Date d'expiration (Opt.)</label>
             <input type="date" v-model="form.expiry_date" class="w-full border border-red-200 rounded-lg p-2 bg-white text-gray-700 focus:border-red-300 focus:ring-2 focus:ring-red-100 outline-none" />
           </div>
@@ -207,6 +213,9 @@ const getCategoryIcon = (category: string) => {
             <p class="text-sm font-semibold text-gray-900 truncate" :title="doc.file_name">{{ doc.file_name }}</p>
             <div class="flex items-center gap-2 text-[10px] text-gray-500 font-medium uppercase mt-0.5">
               <span>{{ doc.category }}</span>
+              <span v-if="doc.numero" class="text-gray-700 font-bold border-l pl-2 border-gray-300">
+                N°: {{ doc.numero }}
+              </span>
               <span v-if="doc.expiry_date" class="text-orange-500">
                 • Exp: {{ doc.expiry_date }}
               </span>

@@ -160,6 +160,9 @@ const getLeaveTypeColor = (type: string) => {
             </td>
             <td class="px-4 py-4 text-right">
               <div class="flex justify-end items-center gap-2">
+                <button v-if="leave.pdf_url" @click="leaveService.downloadCertificate(leave.id)" class="rounded-lg p-1.5 text-blue-600 transition hover:bg-blue-50" title="Imprimer l'attestation">
+                  <span class="material-symbols-outlined text-sm">print</span>
+                </button>
                 <button @click="handleDelete(leave.id)" class="rounded-lg p-1.5 text-red-600 transition hover:bg-red-50" title="Supprimer">
                   <span class="material-symbols-outlined text-sm">delete</span>
                 </button>

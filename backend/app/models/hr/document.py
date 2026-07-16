@@ -19,6 +19,7 @@ class EmployeeDocument(Base):
     storage_path = Column(String, nullable=False) 
     mime_type = Column(String)
     
+    numero = Column(String, nullable=True)
     expiry_date = Column(Date, nullable=True) 
     is_verified = Column(Boolean, default=False) 
 

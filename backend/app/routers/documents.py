@@ -61,6 +61,7 @@ def upload_employee_document(
     employee_id: int,
     file: UploadFile = File(...),
     category: DocumentCategory = Form(...),
+    numero: Optional[str] = Form(None),
     expiry_date: Optional[date] = Form(None),
     _: None = Depends(check_permission("documents.create")),
     current_user: User = Depends(get_current_user),
@@ -88,6 +89,7 @@ def upload_employee_document(
         file_name=file.filename, # On garde le nom original pour l'affichage
         storage_path=storage_path, # Le chemin de stockage
         mime_type=file.content_type,
+        numero=numero,
         expiry_date=expiry_date,
         is_verified=False
     )

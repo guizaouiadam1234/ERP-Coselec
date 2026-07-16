@@ -36,7 +36,38 @@ class ContractResponse(ContractBase):
     class Config:
         from_attributes = True
 
+# --- Leave Requests --- #
+class LeaveRequestBase(BaseModel):
+    employee_id: int
+    leave_type: str
+    start_date: date
+    end_date: date
+    reason: Optional[str] = None
+    pdf_url: Optional[str] = None
+    justificatif_url: Optional[str] = None
 
+class LeaveRequestCreate(LeaveRequestBase):
+    @model_validator(mode="after")
+    def check_dates(self) -> "LeaveRequestCreate":
+        if self.start_date > self.end_date:
+            raise ValueError("La date de début ne peut pas être postérieure à la date de fin.")
+        return self
+
+class LeaveRequestUpdate(BaseModel):
+    leave_type: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    reason: Optional[str] = None
+    status: Optional[str] = None
+    pdf_url: Optional[str] = None
+    justificatif_url: Optional[str] = None
+
+class LeaveRequestResponse(LeaveRequestBase):
+    id: int
+    status: str
+
+    class Config:
+        from_attributes = True
 
 # --- Schémas HR Request --- #
 class HRRequestBase(BaseModel):
@@ -77,6 +108,7 @@ class DocumentResponse(BaseModel):
     file_name: str
     storage_path: str
     mime_type: Optional[str] = None
+    numero: Optional[str] = None
     expiry_date: Optional[date] = None
     is_verified: bool
 

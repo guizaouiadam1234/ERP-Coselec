@@ -241,3 +241,68 @@ def generate_caisse_pdf(data: dict) -> str:
     except Exception as e:
         print(f"Error saving PDF locally: {e}")
         return ""
+
+# -----------------------------------------
+# LEAVE CERTIFICATE PDF GENERATOR
+# -----------------------------------------
+
+def generate_leave_certificate(leave_request, employee) -> str:
+    """Generates an attestation de congé."""
+    pdf_buffer = io.BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Logo
+    logo_style = ParagraphStyle('LogoStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, textColor=colors.red, alignment=1)
+    elements.append(Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style))
+    elements.append(Spacer(1, 30))
+    
+    # Title
+    title_style = ParagraphStyle('Title', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=16, alignment=1, spaceAfter=20)
+    elements.append(Paragraph("ATTESTATION DE CONGE", title_style))
+    elements.append(Spacer(1, 20))
+    
+    # Body
+    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=18)
+    
+    today_str = datetime.now().strftime('%d/%m/%Y')
+    emp_name = f"{employee.first_name} {employee.last_name}" if hasattr(employee, 'first_name') else employee.name
+    
+    content = f"""
+    Nous soussignés, la Direction des Ressources Humaines de COSELEC, attestons par la présente que :<br/><br/>
+    <b>M./Mme {emp_name}</b>, employé(e) au sein de notre structure, bénéficie d'un congé de type <b>{leave_request.leave_type}</b>.<br/><br/>
+    Ce congé est accordé pour la période allant du <b>{leave_request.start_date.strftime('%d/%m/%Y')}</b> au <b>{leave_request.end_date.strftime('%d/%m/%Y')}</b> inclus.<br/><br/>
+    """
+    if leave_request.reason:
+        content += f"<b>Motif :</b> {leave_request.reason}<br/><br/>"
+        
+    content += "La présente attestation est délivrée pour servir et valoir ce que de droit."
+    
+    elements.append(Paragraph(content, body_style))
+    elements.append(Spacer(1, 40))
+    
+    # Date & Signature
+    elements.append(Paragraph(f"Fait à Dakar, le {today_str}", ParagraphStyle('Right', parent=styles['Normal'], alignment=2)))
+    elements.append(Spacer(1, 40))
+    
+    sig_style = ParagraphStyle('Signature', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, alignment=2)
+    elements.append(Paragraph("La Direction des Ressources Humaines", sig_style))
+    
+    doc.build(elements)
+    
+    pdf_buffer.seek(0)
+    emp_name_clean = emp_name.replace(" ", "_").lower()
+    file_name = f"conge_{emp_name_clean}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    local_path = f"uploads/{file_name}"
+    
+    os.makedirs("uploads", exist_ok=True)
+    
+    try:
+        with open(local_path, "wb") as f:
+            f.write(pdf_buffer.read())
+        return local_path
+    except Exception as e:
+        print(f"Error saving PDF locally: {e}")
+        return ""
