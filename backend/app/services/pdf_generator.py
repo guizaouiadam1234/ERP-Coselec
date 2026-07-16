@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from app.modules.requests.models.fuel_request import FuelRequest
 
@@ -26,7 +26,12 @@ def get_dmcar_table(request: FuelRequest):
         alignment=1, # Center
     )
 
-    logo_p = Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style)
+    logo_path = os.path.join(os.path.dirname(__file__), "../../../frontend/public/logo_coselec.jfif")
+    if os.path.exists(logo_path):
+        logo_p = Image(logo_path, width=60, height=60)
+    else:
+        logo_p = Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style)
+        
     title_p = Paragraph("DEMANDE DE CARBURANT", title_style)
 
     # We use 5 columns
@@ -145,8 +150,12 @@ def generate_caisse_pdf(data: dict) -> str:
     styles = getSampleStyleSheet()
     elements = []
     
-    logo_style = ParagraphStyle('LogoStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, textColor=colors.red, alignment=1)
-    elements.append(Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style))
+    logo_path = os.path.join(os.path.dirname(__file__), "../../../frontend/public/logo_coselec.jfif")
+    if os.path.exists(logo_path):
+        elements.append(Image(logo_path, width=80, height=80))
+    else:
+        logo_style = ParagraphStyle('LogoStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, textColor=colors.red, alignment=1)
+        elements.append(Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style))
     elements.append(Spacer(1, 20))
     
     header_style = ParagraphStyle('Header', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, alignment=1, spaceAfter=10)
@@ -255,8 +264,12 @@ def generate_leave_certificate(leave_request, employee) -> str:
     elements = []
     
     # Logo
-    logo_style = ParagraphStyle('LogoStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, textColor=colors.red, alignment=1)
-    elements.append(Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style))
+    logo_path = os.path.join(os.path.dirname(__file__), "../../../frontend/public/logo_coselec.jfif")
+    if os.path.exists(logo_path):
+        elements.append(Image(logo_path, width=80, height=80))
+    else:
+        logo_style = ParagraphStyle('LogoStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, textColor=colors.red, alignment=1)
+        elements.append(Paragraph("GROUPE<br/><b>Y</b><br/>COSELEC", logo_style))
     elements.append(Spacer(1, 30))
     
     # Title

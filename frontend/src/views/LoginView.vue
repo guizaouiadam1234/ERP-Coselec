@@ -49,11 +49,7 @@ async function handleSubmit() {
 			<aside class="brand-panel">
 				<p class="brand-top">GROUPE</p>
 
-				<div class="logo-mark" aria-hidden="true">
-					<span class="logo-wing left"></span>
-					<span class="logo-wing right"></span>
-					<span class="logo-stem"></span>
-				</div>
+				<img src="/logo_coselec.jfif" alt="Logo COSELEC" class="logo-image" />
 
 				<h1>COSELEC</h1>
 				<p class="tagline">Espace de connexion ERP</p>
@@ -183,42 +179,15 @@ async function handleSubmit() {
 	font-family: "Barlow Condensed", sans-serif;
 }
 
-.logo-mark {
-	width: 150px;
-	height: 126px;
-	position: relative;
+.logo-image {
+	width: 140px;
+	height: 140px;
+	object-fit: contain;
+	border-radius: 20px;
 	margin-top: 6px;
-}
-
-.logo-wing {
-	position: absolute;
-	top: 0;
-	width: 0;
-	height: 0;
-	border-top: 34px solid #fff;
-}
-
-.logo-wing.left {
-	left: 16px;
-	border-left: 54px solid transparent;
-	border-right: 30px solid transparent;
-}
-
-.logo-wing.right {
-	right: 16px;
-	border-left: 30px solid transparent;
-	border-right: 54px solid transparent;
-}
-
-.logo-stem {
-	position: absolute;
-	left: 50%;
-	transform: translateX(-50%);
-	top: 30px;
-	width: 56px;
-	height: 90px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 	background: #fff;
-	clip-path: polygon(0 0, 100% 0, 84% 100%, 16% 100%);
+	padding: 10px;
 }
 
 .brand-panel h1 {
@@ -377,27 +346,9 @@ button:disabled {
 		padding: 32px 22px;
 	}
 
-	.logo-mark {
-		width: 126px;
-		height: 106px;
-	}
-
-	.logo-wing.left {
-		left: 12px;
-		border-top-width: 30px;
-		border-left-width: 48px;
-	}
-
-	.logo-wing.right {
-		right: 12px;
-		border-top-width: 30px;
-		border-right-width: 48px;
-	}
-
-	.logo-stem {
-		width: 50px;
-		height: 76px;
-		top: 27px;
+	.logo-image {
+		width: 110px;
+		height: 110px;
 	}
 }
 </style>
