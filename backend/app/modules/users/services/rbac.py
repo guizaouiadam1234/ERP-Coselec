@@ -50,7 +50,12 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "tasks.create" : ("Tâches - creation", "Creer les taches"),
     "tasks.update" : ("Tâches - mise a jour", "Mettre a jour les taches"),
     "tasks.delete" : ("Tâches - suppression", "Supprimer les tâches"),
-    "tasks.read" : ("Tâches - lecture", "Lire les tâches")
+    "tasks.read" : ("Tâches - lecture", "Lire les tâches"),
+    "fuel_requests.read": ("Fuel - lecture", "Consulter les requêtes de carburant"),
+    "fuel_requests.create": ("Fuel - creation", "Créer des requêtes de carburant"),
+    "fuel_requests.update": ("Fuel - mise a jour", "Modifier des requêtes de carburant"),
+    "fuel_requests.delete": ("Fuel - suppression", "Supprimer des requêtes de carburant"),
+    "fuel_requests.validate_finance": ("Fuel - valider finance", "Valider financièrement les requêtes de carburant")
 
 }
 
@@ -67,6 +72,8 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "it_requests.create",
             "facility_requests.read",
             "facility_requests.create",
+            "fuel_requests.read",
+            "fuel_requests.create",
             "hr_requests.read",
             "hr_requests.create",
             "notifications.read",
@@ -111,6 +118,7 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "employees.read",
             "it_requests.read",
             "facility_requests.read",
+            "fuel_requests.read",
             "hr_requests.read",
             "notifications.read",
         },
@@ -134,6 +142,8 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "stock.delete",
             "facility_requests.read",
             "facility_requests.update",
+            "fuel_requests.read",
+            "fuel_requests.update",
             "dashboard.read",
             "notifications.read",
             "notifications.update",
@@ -163,6 +173,8 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "dashboard.read",
             "stock.read",
             "notifications.read",
+            "fuel_requests.read",
+            "fuel_requests.validate_finance",
         },
     },
 }

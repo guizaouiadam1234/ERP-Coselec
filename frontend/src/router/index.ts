@@ -73,6 +73,12 @@ const routes = [
     meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction"] }
   },
   {
+    path: "/fuel-requests",
+    name: "fuel-requests",
+    component: () => import("../views/requests/FuelRequestsView.vue"),
+    meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction", "Finance"] }
+  },
+  {
     path: "/hr-requests",
     name: "hr-requests",
     component: () => import("../views/requests/HRRequestsView.vue"),
@@ -82,6 +88,12 @@ const routes = [
     path: "/requests",
     name: "requests",
     component: () => import("../views/RequestsView.vue")
+  },
+  {
+    path: "/caisse",
+    name: "caisse",
+    component: () => import("../views/CaisseView.vue"),
+    meta: { requiredRoles: ["Admin", "Finance", "Direction"] }
   }
   ,
   {

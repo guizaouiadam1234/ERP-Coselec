@@ -30,6 +30,7 @@ from app.routers.stock.partners import router as partners_router
 from app.routers.stock.categories import router as categories_router
 from app.routers.it_requests import router as it_requests_router
 from app.routers.facility_requests import router as facility_requests_router
+from app.modules.requests.routes.fuel_requests import router as fuel_requests_router
 #notifications router
 from app.routers.notifications import router as notifications_router
 #projects routers
@@ -56,6 +57,7 @@ from app.models.stock.stock import Stock
 from app.models.stock.stockmovement import StockMovement
 from app.models.stock.warehouse import Warehouse
 from app.models.notification import NotificationType
+from app.modules.requests.models.fuel_request import FuelRequest
 
 from app.services.notification import create_notification
 from app.modules.users.services.rbac import (
@@ -86,6 +88,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+from app.routers.caisse import router as caisse_router
+
 app.include_router(employees_router)
 app.include_router(stocks_router)
 app.include_router(stock_operations_router)
@@ -105,6 +109,8 @@ app.include_router(documents_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(auth_router)
+app.include_router(fuel_requests_router)
+app.include_router(caisse_router)
 
 
 raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "")
@@ -114,6 +120,7 @@ default_origins = [
     "http://0.0.0.0:5173",
     "http://192.190.100.41:5173",
     "http://192.190.100.48:5173",
+    "http://192.190.100.104:5173"
 ]
 allow_origins = [
     origin.strip().rstrip("/")
@@ -132,6 +139,12 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+
+from fastapi.staticfiles import StaticFiles
+
+# Create uploads directory if it doesn't exist
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def root():

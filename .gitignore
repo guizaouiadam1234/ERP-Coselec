@@ -17,3 +17,6 @@ env/
 # Local files
 **/.local/
 .local/
+
+#pdf files that aregenerated 
+**/uploads/*.pdf

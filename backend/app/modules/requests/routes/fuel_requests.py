@@ -1,0 +1,92 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from datetime import datetime
+
+from app.core.database.session import get_db
+from app.core.security.auth import get_current_user, check_permission
+from app.modules.users.models.user import User
+from app.modules.requests.models.fuel_request import FuelRequest, FuelRequestStatus
+from app.modules.requests.schemas.fuel_request import FuelRequestCreate, FuelRequestAction, FuelRequestResponse
+from app.services.pdf_generator import generate_dmcar_pdf
+
+router = APIRouter(prefix="/fuel-requests", tags=["Fuel Requests"])
+
+@router.get("/", response_model=list[FuelRequestResponse])
+def list_fuel_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("fuel_requests.read"))
+):
+    requests = db.query(FuelRequest).filter(FuelRequest.is_deleted == False).all()
+    # Inject employee_name if available
+    for r in requests:
+        if r.employee:
+            r.employee_name = f"{r.employee.first_name} {r.employee.last_name}"
+    return requests
+
+@router.post("/", response_model=FuelRequestResponse)
+def create_fuel_request(
+    payload: FuelRequestCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("fuel_requests.create"))
+):
+    new_request = FuelRequest(
+        **payload.dict(),
+        manager_id=current_user.id,
+        status=FuelRequestStatus.PENDING_FINANCE
+    )
+    db.add(new_request)
+    db.commit()
+    db.refresh(new_request)
+    if new_request.employee:
+        new_request.employee_name = f"{new_request.employee.first_name} {new_request.employee.last_name}"
+    return new_request
+
+@router.delete("/{request_id}")
+def delete_fuel_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("fuel_requests.create")) # Assume creator/admin can delete
+):
+    req = db.query(FuelRequest).filter(FuelRequest.id == request_id, FuelRequest.is_deleted == False).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+        
+    req.is_deleted = True
+    db.commit()
+    return {"message": "Request deleted successfully"}
+
+
+@router.post("/{request_id}/validate/finance/", response_model=FuelRequestResponse)
+def validate_finance(
+    request_id: int,
+    payload: FuelRequestAction,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("fuel_requests.validate_finance"))
+):
+    req = db.query(FuelRequest).filter(FuelRequest.id == request_id, FuelRequest.is_deleted == False).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+        
+    if req.status != FuelRequestStatus.PENDING_FINANCE:
+        raise HTTPException(status_code=400, detail="Invalid status for finance validation")
+
+    if payload.action == "APPROVE":
+        req.status = FuelRequestStatus.APPROVED
+        req.finance_validator_id = current_user.id
+        req.finance_validated_at = datetime.utcnow()
+        
+        # Generate the PDF
+        try:
+            pdf_url = generate_dmcar_pdf(req)
+            if pdf_url:
+                req.pdf_url = pdf_url
+        except Exception as e:
+            print(f"Failed to generate PDF: {e}")
+            
+    elif payload.action == "REJECT":
+        req.status = FuelRequestStatus.REJECTED
+        req.rejection_comment = payload.comment
+
+    db.commit()
+    db.refresh(req)
+    return req

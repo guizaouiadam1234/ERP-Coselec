@@ -120,5 +120,7 @@ def check_permission(required_permission: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Droit insuffisant pour accéder à cette ressource"
             )
+            
+        return current_user
 
     return dependency

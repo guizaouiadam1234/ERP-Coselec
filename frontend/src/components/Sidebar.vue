@@ -41,6 +41,10 @@ const canViewFacilityRequests = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction"]);
 });
 
+const canViewFuelRequests = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction", "Finance"]);
+});
+
 const canViewHrRequests = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "RH", "Direction"]);
 });
@@ -148,6 +152,14 @@ onMounted(async () => {
         />
 
         <SidebarItem
+          v-if="canViewFuelRequests"
+          to="/fuel-requests"
+          icon="local_gas_station"
+          label="Demandes Carburant"
+          :collapsed="collapsed"
+        />
+
+        <SidebarItem
           v-if="canViewHrRequests"
           to="/hr-requests"
           icon="groups"
@@ -207,6 +219,13 @@ onMounted(async () => {
           to="/documents"
           icon="description"
           label="GED"
+          :collapsed="collapsed"
+        />
+
+        <SidebarItem
+          to="/caisse"
+          icon="receipt_long"
+          label="Pièce de Caisse"
           :collapsed="collapsed"
         />
       </div>
