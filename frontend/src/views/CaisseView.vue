@@ -57,7 +57,7 @@
                 </thead>
                 <tbody>
                   <tr v-for="(row, index) in form.depenses" :key="'dep-'+index" class="border-b last:border-0">
-                    <td class="py-2 pr-2"><input v-model="row.date" type="text" class="w-full px-3 py-1.5 border rounded-lg" placeholder="DD/MM/YYYY" /></td>
+                    <td class="py-2 pr-2"><input v-model="row.date" type="date" class="w-full px-3 py-1.5 border rounded-lg" /></td>
                     <td class="py-2 pr-2"><input v-model="row.designation" type="text" class="w-full px-3 py-1.5 border rounded-lg" placeholder="Description" /></td>
                     <td class="py-2 pr-2"><input v-model="row.montant" type="text" class="w-full px-3 py-1.5 border rounded-lg" placeholder="0 CFA" /></td>
                     <td class="py-2 text-right">
@@ -89,7 +89,7 @@
                 </thead>
                 <tbody>
                   <tr v-for="(row, index) in form.recettes" :key="'rec-'+index" class="border-b last:border-0">
-                    <td class="py-2 pr-2"><input v-model="row.date" type="text" class="w-full px-3 py-1.5 border rounded-lg" placeholder="DD/MM/YYYY" /></td>
+                    <td class="py-2 pr-2"><input v-model="row.date" type="date" class="w-full px-3 py-1.5 border rounded-lg" /></td>
                     <td class="py-2 pr-2"><input v-model="row.designation" type="text" class="w-full px-3 py-1.5 border rounded-lg" placeholder="Description" /></td>
                     <td class="py-2 pr-2"><input v-model="row.montant" type="text" class="w-full px-3 py-1.5 border rounded-lg" placeholder="0 CFA" /></td>
                     <td class="py-2 text-right">
