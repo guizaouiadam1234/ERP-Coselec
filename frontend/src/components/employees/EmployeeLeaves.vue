@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { leaveService, type LeaveRequest, type LeaveRequestCreate } from '@/services/leaves';
 
 const props = defineProps<{
@@ -11,6 +11,36 @@ const leaves = ref<LeaveRequest[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
 const showForm = ref(false);
+
+const sortColumn = ref('');
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedLeaves = computed(() => {
+  if (!sortColumn.value) return leaves.value;
+  return [...leaves.value].sort((a, b) => {
+    let valA = (a as any)[sortColumn.value];
+    let valB = (b as any)[sortColumn.value];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (axios.isAxiosError(error) && error.response?.status === 403) {
@@ -142,13 +172,17 @@ const getLeaveTypeColor = (type: string) => {
       <table class="min-w-full divide-y divide-red-100 text-left text-xs">
         <thead class="bg-[linear-gradient(180deg,_#fffafa_0%,_#fff2f4_100%)] text-gray-500 font-semibold uppercase tracking-wide">
           <tr>
-            <th class="px-4 py-3">Type</th>
-            <th class="px-4 py-3">Periode</th>
+            <th @click="sortBy('leave_type')" class="px-4 py-3 cursor-pointer hover:bg-gray-100 transition">
+              <div class="flex items-center gap-1">Type <span v-if="sortColumn === 'leave_type'" class="material-symbols-outlined text-[10px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+            </th>
+            <th @click="sortBy('start_date')" class="px-4 py-3 cursor-pointer hover:bg-gray-100 transition">
+              <div class="flex items-center gap-1">Periode <span v-if="sortColumn === 'start_date'" class="material-symbols-outlined text-[10px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+            </th>
             <th class="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-red-50 text-gray-600">
-          <tr v-for="leave in leaves" :key="leave.id" class="transition-colors hover:bg-red-50/40">
+          <tr v-for="leave in sortedLeaves" :key="leave.id" class="transition-colors hover:bg-red-50/40">
             <td class="px-4 py-4 font-semibold text-gray-900">
               <span :class="getLeaveTypeColor(leave.leave_type)" class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide">
                 {{ leave.leave_type }}

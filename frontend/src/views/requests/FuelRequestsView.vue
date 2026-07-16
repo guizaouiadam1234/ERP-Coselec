@@ -23,16 +23,24 @@
           <table class="w-full">
             <thead>
               <tr class="bg-gradient-to-r from-red-100/90 to-red-50 text-left">
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">Date</th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">Employé / Véhicule</th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">Quantité</th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">Statut</th>
+                <th @click="sortBy('request_date')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
+                  <div class="flex items-center gap-2">Date <span v-if="sortColumn === 'request_date'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('employee_name')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
+                  <div class="flex items-center gap-2">Employé / Véhicule <span v-if="sortColumn === 'employee_name'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('quantite_carburant')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
+                  <div class="flex items-center gap-2">Quantité <span v-if="sortColumn === 'quantite_carburant'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('status')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
+                  <div class="flex items-center gap-2">Statut <span v-if="sortColumn === 'status'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
                 <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">PDF</th>
                 <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="req in requests" :key="req.id" class="border-t border-red-100/80 hover:bg-red-50/70 transition">
+              <tr v-for="req in sortedRequests" :key="req.id" class="border-t border-red-100/80 hover:bg-red-50/70 transition">
                 <td class="px-6 py-4 text-gray-600 font-medium whitespace-nowrap">{{ req.request_date }}</td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">{{ req.employee_name || 'N/A' }}</div>
@@ -159,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import Sidebar from '@/components/Sidebar.vue';
 import Navbar from '@/components/Navbar.vue';
 import { api } from '@/services/api';
@@ -168,6 +176,36 @@ import { employeeService } from '@/services/employees';
 const requests = ref<any[]>([]);
 const employees = ref<any[]>([]);
 const showCreateModal = ref(false);
+
+const sortColumn = ref('');
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedRequests = computed(() => {
+  if (!sortColumn.value) return requests.value;
+  return [...requests.value].sort((a, b) => {
+    let valA = a[sortColumn.value];
+    let valB = b[sortColumn.value];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
 
 const getPdfUrl = (url: string) => {
   return `http://${window.location.hostname}:8000/${url}`;

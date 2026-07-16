@@ -147,15 +147,25 @@
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs tracking-wider font-bold">
-                <th class="px-6 py-4">Type</th>
-                <th class="px-6 py-4">Article</th>
-                <th class="px-6 py-4">Emplacement</th>
-                <th class="px-6 py-4">Propriétaire / Tiers</th>
-                <th class="px-6 py-4 text-center">Quantité</th>
+                <th @click="sortBy('type')" class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition">
+                  <div class="flex items-center gap-2">Type <span v-if="sortColumn === 'type'" class="material-symbols-outlined text-xs">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('product')" class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition">
+                  <div class="flex items-center gap-2">Article <span v-if="sortColumn === 'product'" class="material-symbols-outlined text-xs">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('warehouse')" class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition">
+                  <div class="flex items-center gap-2">Emplacement <span v-if="sortColumn === 'warehouse'" class="material-symbols-outlined text-xs">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('partner')" class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition">
+                  <div class="flex items-center gap-2">Propriétaire / Tiers <span v-if="sortColumn === 'partner'" class="material-symbols-outlined text-xs">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
+                <th @click="sortBy('quantity')" class="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition">
+                  <div class="flex items-center justify-center gap-2">Quantité <span v-if="sortColumn === 'quantity'" class="material-symbols-outlined text-xs">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-              <tr v-for="item in movements" :key="item.id" class="hover:bg-gray-50/60 transition-colors">
+              <tr v-for="item in sortedMovements" :key="item.id" class="hover:bg-gray-50/60 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span 
                     :class="item.type === 'ENTRY' ? 'text-green-700 bg-green-50 border-green-200' : 'text-red-700 bg-red-50 border-red-200'" 
@@ -262,6 +272,18 @@ const allProducts = ref<Product[]>([]);
 const warehouses = ref<Warehouse[]>([]);
 const partners = ref<Partner[]>([]);
 const movements = ref<Movement[]>([]);
+
+const sortColumn = ref('');
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
 
 const isInternalPartner = (partner: Partner | undefined) => {
   if (!partner) {
@@ -384,6 +406,38 @@ const resolveWarehouseLabel = (movement: Movement) => {
     `Entrepôt #${movement.warehouse_id}`
   );
 };
+
+const sortedMovements = computed(() => {
+  if (!sortColumn.value) return movements.value;
+  return [...movements.value].sort((a, b) => {
+    let valA: any = '';
+    let valB: any = '';
+
+    if (sortColumn.value === 'type') {
+      valA = a.type;
+      valB = b.type;
+    } else if (sortColumn.value === 'product') {
+      valA = resolveProductLabel(a);
+      valB = resolveProductLabel(b);
+    } else if (sortColumn.value === 'warehouse') {
+      valA = resolveWarehouseLabel(a);
+      valB = resolveWarehouseLabel(b);
+    } else if (sortColumn.value === 'partner') {
+      valA = a.partner?.name || 'Coselec Interne';
+      valB = b.partner?.name || 'Coselec Interne';
+    } else if (sortColumn.value === 'quantity') {
+      valA = a.quantity;
+      valB = b.quantity;
+    }
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
 
 // --- Form Validation & Submission ---
 const submitMovement = async () => {

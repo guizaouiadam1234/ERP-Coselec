@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import api from '@/services/api';
 
@@ -26,6 +26,33 @@ const isLoading = ref<boolean>(false);
 const isSaving = ref<boolean>(false);
 const selectedDepartment = ref<string>('');
 const employees = ref<EmployeeSchedule[]>([]);
+
+const sortColumn = ref('');
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedEmployees = computed(() => {
+  if (!sortColumn.value) return employees.value;
+  return [...employees.value].sort((a, b) => {
+    let valA = (a as any)[sortColumn.value];
+    let valB = (b as any)[sortColumn.value];
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
 
 // Timeline Control States - Defaulting to current week base
 const currentDateCursor = ref<string>('2026-07-06'); 
@@ -245,7 +272,12 @@ onMounted(() => {
           <table class="w-full text-left border-collapse table-fixed min-w-[800px]">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xxs tracking-wider font-bold h-12">
-                <th class="px-6 py-2 font-bold text-gray-700 w-64 sticky left-0 bg-gray-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Collaborateurs</th>
+                <th @click="sortBy('name')" class="px-6 py-2 font-bold text-gray-700 w-64 sticky left-0 bg-gray-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-gray-100 transition">
+                  <div class="flex items-center gap-2">
+                    Collaborateurs
+                    <span v-if="sortColumn === 'name'" class="material-symbols-outlined text-xs">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
+                  </div>
+                </th>
                 <th v-for="day in currentWeekDays" :key="day.fullDate" class="px-2 py-2 text-center border-l border-gray-200/40">
                   <div class="text-gray-900 text-xs font-bold leading-none">{{ day.label }}</div>
                   <div class="text-xxs font-medium mt-1 text-gray-400">{{ day.date }}</div>
@@ -253,7 +285,7 @@ onMounted(() => {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-              <tr v-for="emp in employees" :key="emp.id" class="hover:bg-gray-50/40 transition-colors">
+              <tr v-for="emp in sortedEmployees" :key="emp.id" class="hover:bg-gray-50/40 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap border-r border-gray-200 sticky left-0 bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                   <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 bg-red-100 text-red-700 font-bold text-xs rounded-full flex items-center justify-center uppercase">

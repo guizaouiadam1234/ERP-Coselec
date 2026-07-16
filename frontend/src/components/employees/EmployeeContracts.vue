@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { contractService, type Contract, type ContractCreate } from '@/services/contracts';
 
 const props = defineProps<{
@@ -10,6 +10,36 @@ const contracts = ref<Contract[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
 const showForm = ref(false);
+
+const sortColumn = ref('');
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedContracts = computed(() => {
+  if (!sortColumn.value) return contracts.value;
+  return [...contracts.value].sort((a, b) => {
+    let valA = (a as any)[sortColumn.value];
+    let valB = (b as any)[sortColumn.value];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
 
 // Modèle pour le formulaire d'ajout
 const form = ref<Omit<ContractCreate, 'employee_id'>>({
@@ -118,15 +148,23 @@ const handleDelete = async (id: number) => {
       <table class="min-w-full divide-y divide-red-100 text-left text-xs">
         <thead class="bg-red-50 text-gray-600 font-medium uppercase">
           <tr>
-            <th class="px-4 py-2">Type</th>
-            <th class="px-4 py-2">Début</th>
-            <th class="px-4 py-2">Fin</th>
-            <th class="px-4 py-2">Statut</th>
+            <th @click="sortBy('contract_type')" class="px-4 py-2 cursor-pointer hover:bg-red-100 transition">
+              <div class="flex items-center gap-1">Type <span v-if="sortColumn === 'contract_type'" class="material-symbols-outlined text-[10px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+            </th>
+            <th @click="sortBy('start_date')" class="px-4 py-2 cursor-pointer hover:bg-red-100 transition">
+              <div class="flex items-center gap-1">Début <span v-if="sortColumn === 'start_date'" class="material-symbols-outlined text-[10px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+            </th>
+            <th @click="sortBy('end_date')" class="px-4 py-2 cursor-pointer hover:bg-red-100 transition">
+              <div class="flex items-center gap-1">Fin <span v-if="sortColumn === 'end_date'" class="material-symbols-outlined text-[10px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+            </th>
+            <th @click="sortBy('is_active')" class="px-4 py-2 cursor-pointer hover:bg-red-100 transition">
+              <div class="flex items-center gap-1">Statut <span v-if="sortColumn === 'is_active'" class="material-symbols-outlined text-[10px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span></div>
+            </th>
             <th class="px-4 py-2 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-red-100 text-gray-600">
-          <tr v-for="contract in contracts" :key="contract.id" class="hover:bg-red-50/50">
+          <tr v-for="contract in sortedContracts" :key="contract.id" class="hover:bg-red-50/50">
             <td class="px-4 py-3 font-semibold text-gray-900">{{ contract.contract_type }}</td>
             <td class="px-4 py-3">{{ contract.start_date }}</td>
             <td class="px-4 py-3">{{ contract.end_date || 'Indéterminée' }}</td>

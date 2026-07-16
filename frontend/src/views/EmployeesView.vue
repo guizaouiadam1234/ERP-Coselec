@@ -20,41 +20,46 @@
           <table class="w-full">
             <thead>
               <tr class="bg-gradient-to-r from-red-100/90 to-red-50 text-left">
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                <th @click="sortBy('matricule')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
                   <span class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">pin</span>
                     <span>Matricule</span>
+                    <span v-if="sortColumn === 'matricule'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
                   </span>
                 </th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                <th @click="sortBy('first_name')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
                   <span class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">person</span>
                     <span>Employé</span>
+                    <span v-if="sortColumn === 'first_name'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
                   </span>
                 </th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                <th @click="sortBy('email')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
                   <span class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">mail</span>
                     <span>Email</span>
+                    <span v-if="sortColumn === 'email'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
                   </span>
                 </th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                <th @click="sortBy('position')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
                   <span class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">work</span>
                     <span>Poste</span>
+                    <span v-if="sortColumn === 'position'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
                   </span>
                 </th>
-                <th class="px-6 py-4 text-sm font-semibold text-[#7f071c]">
+                <th @click="sortBy('status')" class="px-6 py-4 text-sm font-semibold text-[#7f071c] cursor-pointer hover:bg-red-50 transition">
                   <span class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-base">verified</span>
                     <span>Statut</span>
+                    <span v-if="sortColumn === 'status'" class="material-symbols-outlined text-sm">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
                   </span>
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="employee in employees"
+                v-for="employee in sortedEmployees"
                 :key="employee.id"
                 @click="openEmployeeDetails(employee)"
                 class="border-t border-red-100/80 hover:bg-red-50/70 transition cursor-pointer"
@@ -282,7 +287,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import { employeeService } from "@/services/employees";
@@ -306,6 +311,37 @@ interface Employee {
 const showCreateModal = ref(false);
 const employees = ref<Employee[]>([]);
 const departments = ref<any[]>([]);
+
+// Sorting logic
+const sortColumn = ref('');
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedEmployees = computed(() => {
+  if (!sortColumn.value) return employees.value;
+  return [...employees.value].sort((a, b) => {
+    let valA = (a as any)[sortColumn.value];
+    let valB = (b as any)[sortColumn.value];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
 
 const form = ref({
   first_name: '',
