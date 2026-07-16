@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.core.database import Base
 
 from app.enums.movement_type import MovementType
 

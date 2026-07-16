@@ -1,7 +1,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.core.database import Base
 
 class HRRequestStatus(str, enum.Enum):
     PENDING = "Pending"

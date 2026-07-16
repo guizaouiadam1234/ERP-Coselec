@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
-from app.database import Base
+from app.core.database import Base
 from app.models.relations import user_roles, role_permissions
 from sqlalchemy.orm import relationship
 

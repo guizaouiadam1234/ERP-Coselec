@@ -1,10 +1,10 @@
 from datetime import datetime, time, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth import get_current_user, check_permission
-from app.models.user import User
-from app.models.employee import Employee
+from app.core.database import get_db
+from app.core.security.auth import get_current_user, check_permission
+from app.modules.users.models.user import User
+from app.modules.users.models.employee import Employee
 from app.models.hr.hr_request import HRRequest, HRRequestStatus
 from app.schemas.hr.hr import HRRequestCreate, HRRequestUpdate, HRRequestResponse
 from app.services.request_notifier import notify_request_created, notify_request_status_change

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth import get_current_user, check_permission
+from app.core.database import get_db
+from app.core.security.auth import get_current_user, check_permission
 from app.models.facility_request import FacilityRequest, FacilityRequestStatus
-from app.models.user import User
+from app.modules.users.models.user import User
 from app.schemas.facility_request import FacilityRequestCreate, FacilityRequestStatusUpdate, FacilityRequestResponse
 from app.services.request_notifier import notify_request_created, notify_request_status_change
 

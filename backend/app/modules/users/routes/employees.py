@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, check_permission
-from app.database import get_db
+from app.core.security.auth import get_current_user, check_permission
+from app.core.database import get_db
 
-from app.models.employee import Employee
+from app.modules.users.models.employee import Employee
 from app.models.notification import NotificationType
-from app.models.user import User
+from app.modules.users.models.user import User
 from app.services.notification import create_notification
 
-from app.schemas.employee import (
+from app.modules.users.schemas.employee import (
     EmployeeCreate,
     EmployeeResponse
 )

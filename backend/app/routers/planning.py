@@ -3,12 +3,12 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, time
 import unicodedata
-from app.auth import get_current_user, check_permission
-from app.database import get_db
-from app.models.employee import Employee
+from app.core.security.auth import get_current_user, check_permission
+from app.core.database import get_db
+from app.modules.users.models.employee import Employee
 from app.models.hr.attendance import Attendance, AttendanceStatus
 from app.models.notification import NotificationType
-from app.models.user import User
+from app.modules.users.models.user import User
 from app.schemas.hr.hr import AttendanceUpdate
 from app.services.notification import create_notification
 from app.services.email import send_ticket_email

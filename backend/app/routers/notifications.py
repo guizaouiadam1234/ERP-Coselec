@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.auth import get_current_user, check_permission
-from app.database import get_db
-from app.models.user import User
+from app.core.security.auth import get_current_user, check_permission
+from app.core.database import get_db
+from app.modules.users.models.user import User
 from app.schemas.notification import NotificationResponse
 from app.services.notification import (
     get_notifications,

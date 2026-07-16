@@ -7,10 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.auth import get_current_user, check_permission
-from app.models.user import User
-from app.models.employee import Employee
+from app.core.database import get_db
+from app.core.security.auth import get_current_user, check_permission
+from app.modules.users.models.user import User
+from app.modules.users.models.employee import Employee
 from app.models.hr.document import EmployeeDocument, DocumentCategory
 from app.services.storage import save_file_locally
 from app.schemas.hr.hr import DocumentResponse

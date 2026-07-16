@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from app.database import SessionLocal #
+from app.core.database import SessionLocal #
 from app.models.hr.document import EmployeeDocument
 from app.services.notification import create_notification #
 from app.models.notification import NotificationType

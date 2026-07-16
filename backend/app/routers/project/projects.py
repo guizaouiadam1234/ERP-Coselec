@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.database import get_db
+from app.core.database import get_db
 from app.models.project.project import Project, ProjectStatus
 from app.models.stock.partner import Partner
 from app.schemas.project.project import ProjectCreate, ProjectResponse, ProjectUpdate
-from app.auth import check_permission
+from app.core.security.auth import check_permission
 from typing import List
 
 router = APIRouter(prefix="/projects", tags=["projects"])

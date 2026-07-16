@@ -1,11 +1,11 @@
 import random
 from faker import Faker
 from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine, Base
+from app.core.database import SessionLocal, engine, Base
 
 # Importation de vos modèles
-from app.models.department import Department
-from app.models.employee import Employee
+from app.modules.users.models.department import Department
+from app.modules.users.models.employee import Employee
 from app.models.stock.category import Category
 from app.models.stock.product import Product
 from app.models.stock.partner import Partner
@@ -13,9 +13,9 @@ from app.models.stock.warehouse import Warehouse
 from app.models.stock.stock import Stock
 from app.models.hr.attendance import Attendance
 from app.models.hr.document import EmployeeDocument
-from app.models.permission import Permission
-from app.models.role import Role
-from app.models.user import User
+from app.modules.users.models.permission import Permission
+from app.modules.users.models.role import Role
+from app.modules.users.models.user import User
 from app.models.it_request import ITRequest
 from app.models.facility_request import FacilityRequest
 from app.models.hr.hr_request import HRRequest

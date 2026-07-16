@@ -4,11 +4,11 @@ import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth import check_permission, get_current_user
+from app.core.database import get_db
+from app.core.security.auth import check_permission, get_current_user
 from app.schemas.project.task import TaskDocumentResponse, TaskResponse, TaskUpdate, TaskCreate
 from app.models.project.project import Project
-from app.models.employee import Employee
+from app.modules.users.models.employee import Employee
 from app.models.project.task import Task, TaskStatus
 from app.models.hr.document import TaskDocument
 from app.services.storage import save_file_locally

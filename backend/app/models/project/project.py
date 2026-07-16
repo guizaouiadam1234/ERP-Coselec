@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Date, Table, Float, ForeignKey
 import enum
 from sqlalchemy.orm import relationship
 from app.models.relations import project_partners
-from app.database import Base
+from app.core.database import Base
 
 class ProjectStatus(enum.Enum):
     STUDY = "En etude"

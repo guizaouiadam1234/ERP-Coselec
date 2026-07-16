@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, ForeignKey, Table
-from app.database import Base
+from app.core.database import Base
 
 task_dependencies = Table(
     "task_dependencies",

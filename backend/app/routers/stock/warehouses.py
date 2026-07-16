@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, check_permission
-from app.database import get_db
+from app.core.security.auth import get_current_user, check_permission
+from app.core.database import get_db
 
 from app.models.stock.warehouse import Warehouse
-from app.models.user import User
+from app.modules.users.models.user import User
 
 from app.schemas.stock.warehouse import (
     WarehouseCreate,

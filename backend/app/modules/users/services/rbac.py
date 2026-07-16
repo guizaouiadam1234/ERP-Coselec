@@ -5,9 +5,9 @@ from collections.abc import Iterable
 
 from sqlalchemy.orm import Session
 
-from app.models.permission import Permission
-from app.models.role import Role
-from app.models.user import User
+from app.modules.users.models.permission import Permission
+from app.modules.users.models.role import Role
+from app.modules.users.models.user import User
 
 
 RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {

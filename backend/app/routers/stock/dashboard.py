@@ -5,12 +5,12 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, check_permission
-from app.database import get_db
+from app.core.security.auth import get_current_user, check_permission
+from app.core.database import get_db
 
 from app.models.stock.product import Product
 from app.models.stock.stock import Stock
-from app.models.user import User
+from app.modules.users.models.user import User
 
 from app.schemas.stock.dashboard import (
     DashboardResponse

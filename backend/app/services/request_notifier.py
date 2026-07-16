@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
 from app.models.notification import Notification, NotificationType
-from app.models.user import User
-from app.models.role import Role
+from app.modules.users.models.user import User
+from app.modules.users.models.role import Role
 from app.models.hr.document import EmployeeDocument
-from app.models.employee import Employee
+from app.modules.users.models.employee import Employee
 from app.services.email import send_ticket_email
-from app.database import SessionLocal
+from app.core.database import SessionLocal
 import os
 
 async def notify_request_created(request_id: int, request_category: str, target_role_names: list[str]):

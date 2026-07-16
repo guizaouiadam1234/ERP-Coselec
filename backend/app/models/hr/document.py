@@ -2,7 +2,7 @@ import enum
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Boolean, Enum, DateTime
 from datetime import datetime
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.core.database import Base
 
 class DocumentCategory(str, enum.Enum):
     IDENTITY = "Identité"
