@@ -15,11 +15,16 @@ from app.models.hr.attendance import Attendance
 from app.models.hr.document import EmployeeDocument
 from app.models.permission import Permission
 from app.models.role import Role
+from app.models.user import User
+from app.models.it_request import ITRequest
+from app.models.facility_request import FacilityRequest
+from app.models.hr.hr_request import HRRequest
 
 # Initialisation de Faker (noms génériques/internationaux)
 fake = Faker()
 
 def seed_database():
+    import app.main # Load all models
     print("⏳ Création des tables si elles n'existent pas...")
     Base.metadata.create_all(bind=engine)
     
@@ -43,7 +48,14 @@ def seed_database():
         perm_stock_write = Permission(code="stock.edit", name="Modifier les stocks")
         perm_emp_read = Permission(code="employee.read", name="Voir les employés")
 
-        db.add_all([perm_stock_read, perm_stock_write, perm_emp_read])
+        perm_it_read = Permission(code="it_requests.read", name="Voir les demandes IT")
+        perm_it_manage = Permission(code="it_requests.create", name="Créer des demandes IT")
+        perm_facility_read = Permission(code="facility_requests.read", name="Voir les demandes logistiques")
+        perm_facility_manage = Permission(code="facility_requests.create", name="Créer des demandes logistiques")
+        perm_hr_read = Permission(code="hr_requests.read", name="Voir les demandes RH")
+        perm_hr_manage = Permission(code="hr_requests.create", name="Créer des demandes RH")
+
+        db.add_all([perm_stock_read, perm_stock_write, perm_emp_read, perm_it_read, perm_it_manage, perm_facility_read, perm_facility_manage, perm_hr_read, perm_hr_manage])
         db.commit()
 
         # Création des rôles

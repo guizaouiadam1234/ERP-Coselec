@@ -93,7 +93,6 @@
 import { computed, reactive } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { createTicket, type TicketCategory } from '@/services/tickets';
 
 const props = defineProps<{
   section: 'hr' | 'it' | 'facilities';
@@ -159,11 +158,8 @@ const isSubmitting = reactive({
   value: false
 });
 
-const sectionToCategory: Record<typeof props.section, TicketCategory> = {
-  hr: 'Leave',
-  it: 'IT',
-  facilities: 'Facility'
-};
+
+import api from '@/services/api';
 
 const submitRequest = async () => {
   if (isSubmitting.value) {
@@ -173,16 +169,26 @@ const submitRequest = async () => {
   isSubmitting.value = true;
 
   try {
-    await createTicket({
-      title: form.subject,
-      description: form.description,
-      category: sectionToCategory[props.section],
-      meta_data: {
-        source_section: props.section,
-        priority: form.priority,
-        attachment: form.attachment || null
-      }
-    });
+    if (props.section === 'it') {
+      await api.post('/it-requests/', {
+        title: form.subject,
+        description: form.description
+      });
+    } else if (props.section === 'facilities') {
+      await api.post('/facility-requests/', {
+        title: form.subject,
+        description: form.description,
+        request_type: 'Maintenance'
+      });
+    } else if (props.section === 'hr') {
+      const today = new Date().toISOString().split('T')[0];
+      await api.post('/hr-requests/', {
+        employee_id: 1, // Fallback, would need actual employee selector
+        request_type: 'Leave',
+        start_date: today,
+        end_date: today
+      });
+    }
 
     form.subject = '';
     form.description = '';

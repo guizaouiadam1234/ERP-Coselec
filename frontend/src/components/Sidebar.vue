@@ -33,6 +33,18 @@ const canViewProjects = computed(() => {
   return hasAnyRole(roles.value, ["Admin"]);
 })
 
+const canViewItRequests = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "IT"]);
+});
+
+const canViewFacilityRequests = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction"]);
+});
+
+const canViewHrRequests = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "RH", "Direction"]);
+});
+
 onMounted(async () => {
   try {
     profile.value = await refreshCurrentUserProfile();
@@ -120,9 +132,26 @@ onMounted(async () => {
         />
 
         <SidebarItem
-          to="/tickets"
-          icon="check_circle"
-          label="Tickets"
+          v-if="canViewItRequests"
+          to="/it-requests"
+          icon="memory"
+          label="Tickets IT"
+          :collapsed="collapsed"
+        />
+
+        <SidebarItem
+          v-if="canViewFacilityRequests"
+          to="/facility-requests"
+          icon="home_repair_service"
+          label="Tickets Logistique"
+          :collapsed="collapsed"
+        />
+
+        <SidebarItem
+          v-if="canViewHrRequests"
+          to="/hr-requests"
+          icon="groups"
+          label="Demandes RH"
           :collapsed="collapsed"
         />
       </div>

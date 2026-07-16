@@ -34,13 +34,15 @@ fm = FastMail(conf)
 async def send_ticket_email(
     email_to: str,
     subject: str,
-    body: str
+    body: str,
+    attachments: list[str] | None = None
 ):
     message = MessageSchema(
         subject=subject,
         recipients=[email_to],
         body=body,
-        subtype="html"
+        subtype="html",
+        attachments=attachments or []
     )
     await fm.send_message(message)
 

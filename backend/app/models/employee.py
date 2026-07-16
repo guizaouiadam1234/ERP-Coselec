@@ -34,4 +34,4 @@ class Employee(Base):
     attendances = relationship("Attendance", back_populates="employee", cascade="all, delete-orphan")
     documents = relationship("EmployeeDocument", back_populates="employee", cascade="all, delete-orphan")
     contracts = relationship("Contract", back_populates="employee", cascade="all, delete-orphan")
-    leave_requests = relationship("LeaveRequest", back_populates="employee", cascade="all, delete-orphan")
+    hr_requests = relationship("HRRequest", back_populates="employee", cascade="all, delete-orphan")

@@ -59,11 +59,24 @@ const routes = [
       requiredRoles: ["Admin", "Stock / Logistique", "Direction"],
     },
   },
-  // tickets
+  // requests boards
   {
-    path: "/tickets",
-    name: "tickets",
-    component: () => import("../views/TicketsView.vue")
+    path: "/it-requests",
+    name: "it-requests",
+    component: () => import("../views/requests/ITRequestsView.vue"),
+    meta: { requiredRoles: ["Admin", "IT"] }
+  },
+  {
+    path: "/facility-requests",
+    name: "facility-requests",
+    component: () => import("../views/requests/FacilityRequestsView.vue"),
+    meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction"] }
+  },
+  {
+    path: "/hr-requests",
+    name: "hr-requests",
+    component: () => import("../views/requests/HRRequestsView.vue"),
+    meta: { requiredRoles: ["Admin", "RH", "Direction"] }
   },
   {
     path: "/requests",
@@ -106,24 +119,20 @@ async function getActiveProfile() {
 }
 
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   const isPublicRoute = to.path === "/login";
   const profile = await getActiveProfile();
 
   if (isPublicRoute) {
     if (profile) {
-      next("/home");
-      return;
+      return "/home";
     }
-
-    next();
     return;
   }
 
   if (!profile) {
     clearStoredProfile();
-    next("/login");
-    return;
+    return "/login";
   }
 
   const requiredRoles = (to.meta.requiredRoles as string[] | undefined) || [];
@@ -132,12 +141,9 @@ router.beforeEach(async (to, from, next) => {
     const authorized = hasAnyRole(profile.roles, requiredRoles);
 
     if (!authorized) {
-      next("/home");
-      return;
+      return "/home";
     }
   }
-
-  next();
 });
 
 

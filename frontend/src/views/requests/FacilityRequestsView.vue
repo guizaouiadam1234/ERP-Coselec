@@ -3,10 +3,9 @@
     <div class="min-h-screen bg-gray-50 p-8">
       <header class="mb-10 flex justify-between items-end">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Helpdesk</h1>
-          <p class="text-sm text-gray-400 mt-1">Gestion des demandes internes</p>
+          <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Facility Requests</h1>
+          <p class="text-sm text-gray-400 mt-1">Gestion des demandes logistiques</p>
         </div>
-        
       </header>
 
       <div class="flex gap-8 w-375 items-start border-2 border-red-100">
@@ -29,22 +28,22 @@
 
           <div class="flex flex-col gap-4">
             <div 
-              v-for="ticket in getTicketsByStatus(status.value)" 
-              :key="ticket.id"
+              v-for="request in getRequestsByStatus(status.value)" 
+              :key="request.id"
               class="bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md cursor-grab"
-              :class="draggingTicketId === ticket.id ? 'opacity-50' : ''"
+              :class="draggingRequestId === request.id ? 'opacity-50' : ''"
               draggable="true"
-              @dragstart="onDragStart(ticket.id)"
+              @dragstart="onDragStart(request.id)"
               @dragend="onDragEnd"
             >
-              <span class="block text-[10px] font-mono text-red-500 mb-2">TICKET-{{ ticket.id }}</span>
+              <span class="block text-[10px] font-mono text-red-500 mb-2">FAC-{{ request.id }}</span>
               <h4 class="text-sm font-semibold text-gray-900 leading-tight mb-3">
-                {{ ticket.title }}
+                {{ request.title }}
               </h4>
               <div class="flex justify-between items-center">
-                <span class="text-[10px] text-gray-400 uppercase font-medium">{{ ticket.category }}</span>
+                <span class="text-[10px] text-gray-400 uppercase font-medium">{{ request.request_type }}</span>
                 <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">
-                  {{ ticket.creator_id }}
+                  {{ request.creator_id }}
                 </div>
               </div>
             </div>
@@ -57,41 +56,39 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { api } from '@/services/api';
+import api from '@/services/api';
 import AppLayout from '@/layouts/AppLayout.vue';
 
-const tickets = ref([]);
-const showModal = ref(false);
-const draggingTicketId = ref(null);
+const requests = ref([]);
+const draggingRequestId = ref(null);
 const dropTargetStatus = ref(null);
 const isUpdatingStatus = ref(false);
 
 const statuses = [
-  { label: 'À traiter', value: 'Open' },
+  { label: 'À traiter', value: 'Pending' },
   { label: 'En cours', value: 'In Progress' },
-  { label: 'Résolu', value: 'Resolved' },
-  { label: 'Fermé', value: 'Closed' }
+  { label: 'Résolu', value: 'Resolved' }
 ];
 
-const getTicketsByStatus = (statusValue) => {
-  return tickets.value.filter(t => t.status === statusValue);
+const getRequestsByStatus = (statusValue) => {
+  return requests.value.filter(t => t.status === statusValue);
 };
 
-const loadTickets = async () => {
+const loadRequests = async () => {
   try {
-    const response = await api.get('/tickets/');
-    tickets.value = response.data;
+    const response = await api.get('/facility-requests/');
+    requests.value = response.data;
   } catch (err) {
-    console.error("Erreur lors du chargement des tickets", err);
+    console.error("Erreur", err);
   }
 };
 
-const onDragStart = (ticketId) => {
-  draggingTicketId.value = ticketId;
+const onDragStart = (requestId) => {
+  draggingRequestId.value = requestId;
 };
 
 const onDragEnd = () => {
-  draggingTicketId.value = null;
+  draggingRequestId.value = null;
   dropTargetStatus.value = null;
 };
 
@@ -104,53 +101,54 @@ const onDragLeave = () => {
 };
 
 const onDrop = async (targetStatus) => {
-  if (draggingTicketId.value === null || isUpdatingStatus.value) {
-    return;
-  }
+  if (draggingRequestId.value === null || isUpdatingStatus.value) return;
 
-  const ticket = tickets.value.find((item) => item.id === draggingTicketId.value);
-  if (!ticket) {
+  const request = requests.value.find((item) => item.id === draggingRequestId.value);
+  if (!request || request.status === targetStatus) {
     onDragEnd();
     return;
   }
 
-  if (ticket.status === targetStatus) {
-    onDragEnd();
-    return;
+  let rejection_comment = null;
+  if (['Resolved', 'Rejected', 'Approved'].includes(targetStatus)) {
+    rejection_comment = window.prompt("Ajouter un commentaire (optionnel) :");
   }
 
   isUpdatingStatus.value = true;
 
   try {
-    const response = await api.patch(`/tickets/${ticket.id}/status`, { status: targetStatus });
-
-    const updatedTicket = response.data;
-    tickets.value = tickets.value.map((item) =>
-      item.id === updatedTicket.id ? updatedTicket : item
+    const response = await api.patch(`/facility-requests/${request.id}/status`, { 
+      status: targetStatus,
+      rejection_comment: rejection_comment || undefined
+    });
+    const updatedRequest = response.data;
+    requests.value = requests.value.map((item) =>
+      item.id === updatedRequest.id ? updatedRequest : item
     );
   } catch (error) {
-    console.error('Erreur lors du changement de statut', error);
-    alert("Impossible de changer le statut du ticket.");
+    console.error('Erreur', error);
+    alert("Impossible de changer le statut.");
   } finally {
     isUpdatingStatus.value = false;
     onDragEnd();
   }
 };
 
-const maxTicketsInColumn = computed(() => {
-  return Math.max(
-    ...statuses.map(status => getTicketsByStatus(status.value).length)
+const maxRequestsInColumn = computed(() => {
+  const max = Math.max(
+    ...statuses.map(status => getRequestsByStatus(status.value).length),
+    0
   );
+  return max;
 });
 
 const columnHeight = computed(() => {
-  const ticketHeight = 120;
+  const requestHeight = 120;
   const padding = 100;
-
-  return `${maxTicketsInColumn.value * ticketHeight + padding}px`;
+  return `${maxRequestsInColumn.value * requestHeight + padding}px`;
 });
 
 onMounted(async () => {
-  await loadTickets();
+  await loadRequests();
 });
 </script>
