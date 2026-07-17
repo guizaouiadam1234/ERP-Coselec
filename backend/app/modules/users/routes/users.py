@@ -71,7 +71,7 @@ def delete_user(
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Vous ne pouvez pas supprimer votre propre compte.")
         
-    success = user_service.delete_user(db, user_id)
+    success = user_service.delete_user(db, user_id, current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
     return None
