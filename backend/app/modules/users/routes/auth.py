@@ -112,7 +112,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         httponly=True,
         max_age=max_age_seconds,
         expires=max_age_seconds,
-        samesite="lax"
+        samesite="none",
+        secure=True
     )
     return response
 
