@@ -56,6 +56,27 @@ def upload_file_to_minio(file, file_name: str) -> str:
     # since we use BUCKET_NAME explicitly in other functions.
     return file_name
 
+def upload_buffer_to_minio(buffer, file_name: str, content_type: str = "application/pdf") -> str:
+    """Uploads an in-memory buffer to the S3 compatible cloud storage"""
+    minio_client = get_minio_client()
+
+    if not minio_client.bucket_exists(BUCKET_NAME):
+        minio_client.make_bucket(BUCKET_NAME)
+    
+    buffer.seek(0, 2)
+    file_size = buffer.tell()
+    buffer.seek(0)
+    
+    minio_client.put_object(
+        BUCKET_NAME,
+        file_name,
+        buffer, 
+        length=file_size,
+        part_size=10*1024*1024,
+        content_type=content_type
+    )
+    return file_name
+
 def get_file_url_from_minio(file_name: str) -> str:
     """Generates a presigned URL to download a file securely, valid for 1 hour."""
     minio_client = get_minio_client()
