@@ -37,7 +37,8 @@ class SlidingSessionMiddleware(BaseHTTPMiddleware):
                             httponly=True,
                             max_age=max_age_seconds,
                             expires=max_age_seconds,
-                            samesite="lax"
+                            samesite="none",
+                            secure=True
                         )
             except JWTError:
                 # Invalid or expired token, let normal auth flow (get_current_user) handle it
