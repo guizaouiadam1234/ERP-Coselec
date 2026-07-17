@@ -214,6 +214,8 @@ const getPdfUrl = (url: string) => {
 const form = ref({
   employee_id: '',
   request_date: new Date().toISOString().split('T')[0],
+  affaire_no: '',
+  dossier_no: '',
   vehicule_matricule: '',
   objet_deplacement: '',
   destination: '',
@@ -246,6 +248,8 @@ async function submitRequest() {
     showCreateModal.value = false;
     // Reset form
     form.value.employee_id = '';
+    form.value.affaire_no = '';
+    form.value.dossier_no = '';
     form.value.vehicule_matricule = '';
     form.value.objet_deplacement = '';
     form.value.destination = '';
