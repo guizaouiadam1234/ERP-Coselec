@@ -13,6 +13,7 @@ from app.core.security.auth import (
     verify_password,
     create_access_token,
     hash_password,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from app.modules.users.services.rbac import (
     ensure_rbac_setup,
@@ -104,12 +105,13 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": str(user.id)})
     response = JSONResponse(content={"message" : "Login successful"})
+    max_age_seconds = ACCESS_TOKEN_EXPIRE_MINUTES * 60
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        max_age=3600,
-        expires=3600,
+        max_age=max_age_seconds,
+        expires=max_age_seconds,
         samesite="lax"
     )
     return response

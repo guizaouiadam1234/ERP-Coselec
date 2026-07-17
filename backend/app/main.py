@@ -11,6 +11,7 @@ from app.tasks.hr_alerts import check_document_expirations
 #schemas
 from app.modules.users.schemas.register import RegisterRequest
 
+from app.core.security.middleware import SlidingSessionMiddleware
 from app.modules.users.routes.auth import router as auth_router
 from app.modules.users.routes.users import router as users_router
 
@@ -144,6 +145,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition"]
 )
+
+app.add_middleware(SlidingSessionMiddleware)
+
 
 Base.metadata.create_all(bind=engine)
 
