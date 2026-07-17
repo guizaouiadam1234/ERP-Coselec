@@ -9,9 +9,9 @@ ENV SECRET_KEY="super-secret-key-12345"
 ENV MAIL_SERVER="smtp.resend.com"
 ENV MAIL_PORT="465"
 ENV MAIL_USERNAME="resend"
-# IMPORTANT: Set MAIL_PASSWORD to your Resend API Key in production (Render ENV vars)
+# IMPORTANT: Set MAIL_PASSWORD to your Resend API Key in Render ENV vars
 ENV MAIL_PASSWORD=""
-ENV MAIL_FROM="noreply@coselec.sn"
+ENV MAIL_FROM="onboarding@resend.dev"
 ENV MAIL_STARTTLS="false"
 ENV MAIL_SSL_TLS="true"
 
