@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Set environment variables to ensure python output is straight to terminal (unbuffered)
 ENV PYTHONDONTWRITEBYTECODE=1
