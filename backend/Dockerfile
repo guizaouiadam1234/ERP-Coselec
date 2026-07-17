@@ -6,11 +6,14 @@ ENV PYTHONUNBUFFERED=1
 
 # Environment Variables (Hardcoded to bypass manual Render dashboard entry)
 ENV SECRET_KEY="super-secret-key-12345"
-ENV MAIL_SERVER="smtp.ethereal.email"
-ENV MAIL_PORT="587"
-ENV MAIL_USERNAME="louie.pfeffer53@ethereal.email"
-ENV MAIL_PASSWORD="dPxQRM9bSS6JB35kUG"
-ENV MAIL_FROM="erp@coselec.sn"
+ENV MAIL_SERVER="smtp.resend.com"
+ENV MAIL_PORT="465"
+ENV MAIL_USERNAME="resend"
+# IMPORTANT: Set MAIL_PASSWORD to your Resend API Key in production (Render ENV vars)
+ENV MAIL_PASSWORD=""
+ENV MAIL_FROM="noreply@coselec.sn"
+ENV MAIL_STARTTLS="false"
+ENV MAIL_SSL_TLS="true"
 
 WORKDIR /app
 
