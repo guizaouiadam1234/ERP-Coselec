@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { login } from "../services/auth";
+import { login, changePassword } from "../services/auth";
 import { refreshCurrentUserProfile } from "@/services/session";
 
 import { useRouter } from "vue-router";
@@ -15,27 +15,64 @@ const loading = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 
+const requirePasswordChange = ref(false);
+const newPassword = ref("");
+const confirmPassword = ref("");
+
 async function handleSubmit() {
-	if (!username.value || !password.value) {
-		errorMessage.value = "Veuillez renseigner votre identifiant et votre mot de passe.";
+	if (!requirePasswordChange.value) {
+		if (!username.value || !password.value) {
+			errorMessage.value = "Veuillez renseigner votre identifiant et votre mot de passe.";
+			successMessage.value = "";
+			return;
+		}
+
+		loading.value = true;
+		errorMessage.value = "";
 		successMessage.value = "";
-		return;
-	}
 
-	loading.value = true;
-	errorMessage.value = "";
-	successMessage.value = "";
+		try {
+			await login(username.value, password.value);
+			await refreshCurrentUserProfile();
+			successMessage.value = "Connexion reussie ! Redirection en cours...";
+			router.push("/home");
+		}
+		catch (error: any) {
+			if (error.response?.data?.detail === "PASSWORD_CHANGE_REQUIRED") {
+				requirePasswordChange.value = true;
+				errorMessage.value = "";
+				successMessage.value = "Vous devez changer votre mot de passe pour continuer.";
+			} else if (error.response?.data?.detail) {
+				errorMessage.value = error.response.data.detail;
+			} else {
+				errorMessage.value = "Connexion impossible. Verifiez vos informations.";
+			}
+		} finally {
+			loading.value = false;
+		}
+	} else {
+		if (!newPassword.value || newPassword.value !== confirmPassword.value) {
+			errorMessage.value = "Les mots de passe ne correspondent pas.";
+			return;
+		}
 
-	try {
-		await login(username.value, password.value);
-		await refreshCurrentUserProfile();
-		successMessage.value = "Connexion reussie ! Redirection en cours...";
-		router.push("/home");
-	}
-	catch (error) {
-		errorMessage.value = "Connexion impossible. Verifiez vos informations.";
-	} finally {
-		loading.value = false;
+		loading.value = true;
+		errorMessage.value = "";
+		successMessage.value = "";
+
+		try {
+			await changePassword(username.value, password.value, newPassword.value);
+			successMessage.value = "Mot de passe modifié avec succès ! Connexion en cours...";
+			
+			// Auto-login after password change
+			await login(username.value, newPassword.value);
+			await refreshCurrentUserProfile();
+			router.push("/home");
+		} catch (error: any) {
+			errorMessage.value = error.response?.data?.detail || "Erreur lors du changement de mot de passe.";
+		} finally {
+			loading.value = false;
+		}
 	}
 }
 </script>
@@ -60,34 +97,54 @@ async function handleSubmit() {
 				<p class="subtitle">Accedez a votre espace professionnel.</p>
 
 				<form @submit.prevent="handleSubmit" class="login-form">
-					<label for="username">Identifiant</label>
-					<input
-						id="username"
-						v-model="username"
-						type="text"
-						autocomplete="username"
-						placeholder="ex: a.guizaoui"
-					/>
+					<template v-if="!requirePasswordChange">
+						<label for="username">Identifiant</label>
+						<input
+							id="username"
+							v-model="username"
+							type="text"
+							autocomplete="username"
+							placeholder="ex: a.guizaoui"
+						/>
 
-					<label for="password">Mot de passe</label>
-					<input
-						id="password"
-						v-model="password"
-						type="password"
-						autocomplete="current-password"
-						placeholder="••••••••"
-					/>
+						<label for="password">Mot de passe</label>
+						<input
+							id="password"
+							v-model="password"
+							type="password"
+							autocomplete="current-password"
+							placeholder="••••••••"
+						/>
 
-					<div class="form-row">
-						<label class="remember">
-							<input v-model="rememberMe" type="checkbox" />
-							<span>Rester connecte</span>
-						</label>
-						<a href="#" @click.prevent>Mot de passe oublie ?</a>
-					</div>
+						<div class="form-row">
+							<label class="remember">
+								<input v-model="rememberMe" type="checkbox" />
+								<span>Rester connecte</span>
+							</label>
+							<a href="#" @click.prevent>Mot de passe oublie ?</a>
+						</div>
+					</template>
+
+					<template v-else>
+						<label for="newPassword">Nouveau mot de passe</label>
+						<input
+							id="newPassword"
+							v-model="newPassword"
+							type="password"
+							placeholder="Nouveau mot de passe"
+						/>
+						
+						<label for="confirmPassword">Confirmer le mot de passe</label>
+						<input
+							id="confirmPassword"
+							v-model="confirmPassword"
+							type="password"
+							placeholder="Confirmer"
+						/>
+					</template>
 
 					<button :disabled="loading" type="submit">
-						{{ loading ? "Connexion..." : "Connexion" }}
+						{{ loading ? (requirePasswordChange ? "Modification..." : "Connexion...") : (requirePasswordChange ? "Changer le mot de passe" : "Connexion") }}
 					</button>
 
 					<p v-if="errorMessage" class="feedback error">{{ errorMessage }}</p>

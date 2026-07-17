@@ -33,6 +33,10 @@ const canViewProjects = computed(() => {
   return hasAnyRole(roles.value, ["Admin"]);
 })
 
+const canViewAdmin = computed(() => {
+  return hasAnyRole(roles.value, ["Admin"]);
+});
+
 const canViewItRequests = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "IT"]);
 });
@@ -216,16 +220,26 @@ onMounted(async () => {
         </h2>
 
         <SidebarItem
-          to="/documents"
-          icon="description"
-          label="GED"
-          :collapsed="collapsed"
-        />
-
-        <SidebarItem
           to="/caisse"
           icon="receipt_long"
           label="Pièce de Caisse"
+          :collapsed="collapsed"
+        />
+      </div>
+
+      <!-- Admin -->
+      <div v-if="canViewAdmin">
+        <h2
+          v-if="!collapsed"
+          class="text-xs uppercase text-red-200 mb-2"
+        >
+          Admin
+        </h2>
+
+        <SidebarItem
+          to="/admin/users"
+          icon="admin_panel_settings"
+          label="Gestion des utilisateurs"
           :collapsed="collapsed"
         />
       </div>

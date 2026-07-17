@@ -18,3 +18,17 @@ export async function logout() {
     throw error;
   }
 }
+
+export async function changePassword(email: string, oldPassword: string, newPassword: string) {
+  try {
+    const response = await api.post("/change-password", {
+      email,
+      old_password: oldPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Change password failed:", error);
+    throw error;
+  }
+}

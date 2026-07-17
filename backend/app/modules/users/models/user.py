@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.relations import user_roles
@@ -10,6 +10,11 @@ class User(Base):
     name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+    last_login = Column(DateTime, nullable=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    requires_password_change = Column(Boolean, default=False)
 
     created_it_requests = relationship("ITRequest", foreign_keys="ITRequest.creator_id", back_populates="creator")
     assigned_it_requests = relationship("ITRequest", foreign_keys="ITRequest.assigned_to_id", back_populates="assigned_to")

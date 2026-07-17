@@ -12,6 +12,7 @@ from app.tasks.hr_alerts import check_document_expirations
 from app.modules.users.schemas.register import RegisterRequest
 
 from app.modules.users.routes.auth import router as auth_router
+from app.modules.users.routes.users import router as users_router
 
 #hr routers
 from app.modules.users.routes.employees import router as employees_router
@@ -115,6 +116,7 @@ app.include_router(fuel_requests_router)
 app.include_router(caisse_router)
 app.include_router(departments_router)
 app.include_router(leave_requests_router)
+app.include_router(users_router)
 
 
 raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "")

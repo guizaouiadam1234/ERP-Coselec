@@ -124,3 +124,12 @@ def check_permission(required_permission: str):
         return current_user
 
     return dependency
+
+def require_admin_role(current_user: User = Depends(get_current_user)):
+    is_admin = any(role.name == "Admin" for role in current_user.roles)
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé aux administrateurs"
+        )
+    return current_user

@@ -107,6 +107,13 @@ const routes = [
     name: "projects",
     component: () => import("@/views/project/ProjectView.vue"),
     props:true
+  },
+  // Admin Routes
+  {
+    path: "/admin/users",
+    name: "admin-users",
+    component: () => import("@/views/Admin/UsersView.vue"),
+    meta: { requiredRoles: ["Admin"] }
   }
 
 ];

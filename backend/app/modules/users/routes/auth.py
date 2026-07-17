@@ -54,6 +54,8 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
 
     return {"message": "User registered successfully", "user_id": user.id}
 
+from datetime import datetime, timedelta
+
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     email = payload.email or payload.username
@@ -64,8 +66,41 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Check active status
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Compte inactif ou supprimé")
+
+    # Check 90 days inactivity
+    now = datetime.utcnow()
+    if user.last_login and user.last_login < now - timedelta(days=90):
+        user.is_active = False
+        db.commit()
+        raise HTTPException(status_code=403, detail="Compte désactivé pour inactivité prolongée (> 90 jours)")
+
+    # Check lockout
+    if user.locked_until and user.locked_until > now:
+        raise HTTPException(status_code=403, detail="Compte temporairement verrouillé. Veuillez réessayer plus tard.")
+
+    # Check password
     if not verify_password(payload.password, user.hashed_password):
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= 5:
+            user.locked_until = now + timedelta(minutes=15)
+        db.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Reset lockout and set last_login
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.last_login = now
+    db.commit()
+
+    # Check onboarding password change
+    if user.requires_password_change:
+        return JSONResponse(
+            status_code=403, 
+            content={"detail": "PASSWORD_CHANGE_REQUIRED", "email": email}
+        )
 
     token = create_access_token({"sub": str(user.id)})
     response = JSONResponse(content={"message" : "Login successful"})
@@ -93,3 +128,35 @@ def logout():
     response = JSONResponse(content={"message": "Logout successful"})
     response.delete_cookie(key="access_token", samesite="lax")
     return response
+
+class ChangePasswordRequest(BaseModel):
+    email: str
+    old_password: str
+    new_password: str
+
+@router.post("/change-password")
+def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Utilisateur introuvable")
+
+    if not verify_password(payload.old_password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Ancien mot de passe incorrect")
+
+    # Update password and reset flag
+    user.hashed_password = hash_password(payload.new_password)
+    user.requires_password_change = False
+    
+    # Audit log
+    from app.modules.users.models.audit_log import AuditLog
+    audit = AuditLog(
+        actor_id=user.id,
+        target_user_id=user.id,
+        action_type="PASSWORD_CHANGE",
+        old_value="***",
+        new_value="***"
+    )
+    db.add(audit)
+    db.commit()
+
+    return {"message": "Mot de passe modifié avec succès"}
