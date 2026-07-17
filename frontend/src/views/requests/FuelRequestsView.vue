@@ -53,7 +53,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <a v-if="req.pdf_url" :href="getPdfUrl(req.pdf_url)" target="_blank" class="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 font-semibold">
+                  <a v-if="req.pdf_url" :href="getPdfUrl(req)" target="_blank" class="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 font-semibold">
                     <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
                     Télécharger PDF
                   </a>
@@ -207,8 +207,9 @@ const sortedRequests = computed(() => {
   });
 });
 
-const getPdfUrl = (url: string) => {
-  return `http://${window.location.hostname}:8000/${url}`;
+const getPdfUrl = (req: any) => {
+  const baseUrl = api.defaults.baseURL || `http://${window.location.hostname}:8000`;
+  return `${baseUrl}/fuel-requests/${req.id}/download-pdf`;
 };
 
 const form = ref({

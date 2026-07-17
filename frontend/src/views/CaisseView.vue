@@ -130,8 +130,8 @@ const removeRecette = (index: number) => form.value.recettes.splice(index, 1);
 async function generateCaissePdf() {
   try {
     const res = await api.post('/caisse/generate', form.value);
-    if (res.data.pdf_url) {
-      const url = `http://${window.location.hostname}:8000/${res.data.pdf_url}`;
+    if (res.data && res.data.pdf_url) {
+      const url = res.data.pdf_url;
       window.open(url, '_blank');
     }
   } catch (e) {

@@ -6,6 +6,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from app.modules.requests.models.fuel_request import FuelRequest
+from app.services.storage import upload_buffer_to_minio
 
 def get_dmcar_table(request: FuelRequest):
     """Generates a single DMCAR table block."""
@@ -126,16 +127,12 @@ def generate_dmcar_pdf(request: FuelRequest) -> str:
     
     pdf_buffer.seek(0)
     file_name = f"DMCAR_{request.id:04d}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-    local_path = f"uploads/{file_name}"
-    
-    os.makedirs("uploads", exist_ok=True)
     
     try:
-        with open(local_path, "wb") as f:
-            f.write(pdf_buffer.read())
-        return local_path
+        # Save directly to Cloudflare R2 / MinIO
+        return upload_buffer_to_minio(pdf_buffer, file_name)
     except Exception as e:
-        print(f"Error saving PDF locally: {e}")
+        print(f"Error saving PDF to cloud: {e}")
         return ""
 
 
@@ -239,16 +236,11 @@ def generate_caisse_pdf(data: dict) -> str:
     
     pdf_buffer.seek(0)
     file_name = f"CAISSE_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-    local_path = f"uploads/{file_name}"
-    
-    os.makedirs("uploads", exist_ok=True)
     
     try:
-        with open(local_path, "wb") as f:
-            f.write(pdf_buffer.read())
-        return local_path
+        return upload_buffer_to_minio(pdf_buffer, file_name)
     except Exception as e:
-        print(f"Error saving PDF locally: {e}")
+        print(f"Error saving PDF to cloud: {e}")
         return ""
 
 # -----------------------------------------
@@ -308,14 +300,9 @@ def generate_leave_certificate(leave_request, employee) -> str:
     pdf_buffer.seek(0)
     emp_name_clean = emp_name.replace(" ", "_").lower()
     file_name = f"conge_{emp_name_clean}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    local_path = f"uploads/{file_name}"
-    
-    os.makedirs("uploads", exist_ok=True)
     
     try:
-        with open(local_path, "wb") as f:
-            f.write(pdf_buffer.read())
-        return local_path
+        return upload_buffer_to_minio(pdf_buffer, file_name)
     except Exception as e:
-        print(f"Error saving PDF locally: {e}")
+        print(f"Error saving PDF to cloud: {e}")
         return ""

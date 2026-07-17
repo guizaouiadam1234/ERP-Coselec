@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -8,6 +9,7 @@ from app.modules.users.models.user import User
 from app.modules.requests.models.fuel_request import FuelRequest, FuelRequestStatus
 from app.modules.requests.schemas.fuel_request import FuelRequestCreate, FuelRequestAction, FuelRequestResponse
 from app.services.pdf_generator import generate_dmcar_pdf
+from app.services.storage import get_file_url_from_minio
 
 router = APIRouter(prefix="/fuel-requests", tags=["Fuel Requests"])
 
@@ -90,3 +92,19 @@ def validate_finance(
     db.commit()
     db.refresh(req)
     return req
+
+@router.get("/{request_id}/download-pdf")
+def download_fuel_request_pdf(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("fuel_requests.read"))
+):
+    req = db.query(FuelRequest).filter(FuelRequest.id == request_id, FuelRequest.is_deleted == False).first()
+    if not req or not req.pdf_url:
+        raise HTTPException(status_code=404, detail="PDF non trouvé")
+        
+    try:
+        url = get_file_url_from_minio(req.pdf_url)
+        return RedirectResponse(url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Erreur lors de la récupération du fichier cloud")
