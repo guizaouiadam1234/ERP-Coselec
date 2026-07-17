@@ -129,7 +129,7 @@ def me(current_user: User = Depends(get_current_user)):
 @router.post("/logout/")
 def logout():
     response = JSONResponse(content={"message": "Logout successful"})
-    response.delete_cookie(key="access_token", samesite="lax")
+    response.delete_cookie(key="access_token", samesite="none", secure=True)
     return response
 
 class ChangePasswordRequest(BaseModel):
