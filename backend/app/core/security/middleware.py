@@ -3,7 +3,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from datetime import datetime, timezone
 from jose import jwt, JWTError
 
-from app.core.security.auth import _require_secret_key, ALGORITHM, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.security.auth import (
+    _require_secret_key,
+    ALGORITHM,
+    create_access_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    COOKIE_SECURE,
+    COOKIE_SAMESITE,
+)
 
 class SlidingSessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -37,8 +44,8 @@ class SlidingSessionMiddleware(BaseHTTPMiddleware):
                             httponly=True,
                             max_age=max_age_seconds,
                             expires=max_age_seconds,
-                            samesite="none",
-                            secure=True
+                            samesite=COOKIE_SAMESITE,
+                            secure=COOKIE_SECURE
                         )
             except JWTError:
                 # Invalid or expired token, let normal auth flow (get_current_user) handle it

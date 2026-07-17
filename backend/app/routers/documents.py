@@ -4,7 +4,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -12,7 +12,7 @@ from app.core.security.auth import get_current_user, check_permission
 from app.modules.users.models.user import User
 from app.modules.users.models.employee import Employee
 from app.models.hr.document import EmployeeDocument, DocumentCategory
-from app.services.storage import save_file_locally
+from app.services.storage import upload_file_to_minio, get_file_url_from_minio, delete_file_from_minio
 from app.schemas.hr.hr import DocumentResponse
 
 router = APIRouter(
@@ -32,14 +32,11 @@ def download_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document introuvable")
 
-    if not os.path.isfile(doc.storage_path):
-        raise HTTPException(status_code=404, detail="Fichier introuvable")
-
-    return FileResponse(
-        path=doc.storage_path,
-        media_type=doc.mime_type or "application/octet-stream",
-        filename=doc.file_name,
-    )
+    try:
+        url = get_file_url_from_minio(doc.storage_path)
+        return RedirectResponse(url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Erreur lors de la récupération du fichier")
 
 @router.get("/{employee_id}/documents", response_model=list[DocumentResponse])
 def get_employee_documents(
@@ -78,7 +75,7 @@ def upload_employee_document(
 
     # 3. Sauvegarde du fichier via le service de stockage
     try:
-        storage_path = save_file_locally(file, unique_filename)
+        storage_path = upload_file_to_minio(file, unique_filename)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
 
@@ -111,8 +108,8 @@ def delete_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document introuvable")
 
-    # TODO (Optionnel): Ajouter ici la logique pour supprimer physiquement le fichier de MinIO
-    # minio_client.remove_object(BUCKET_NAME, doc.storage_path.split("/")[-1])
+    # Suppression physique du fichier sur Cloudflare R2 / MinIO
+    delete_file_from_minio(doc.storage_path)
 
     db.delete(doc)
     db.commit()

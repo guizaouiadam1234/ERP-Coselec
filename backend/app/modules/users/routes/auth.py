@@ -14,6 +14,8 @@ from app.core.security.auth import (
     create_access_token,
     hash_password,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    COOKIE_SECURE,
+    COOKIE_SAMESITE,
 )
 from app.modules.users.services.rbac import (
     ensure_rbac_setup,
@@ -63,8 +65,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not email:
         raise HTTPException(status_code=422, detail="email or username is required")
 
+    print(f"DEBUG: login request for: {email}, password: {payload.password}")
     user = db.query(User).filter(User.email == email).first()
     if not user:
+        print(f"DEBUG: user {email} not found in DB")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Check active status
@@ -84,11 +88,13 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     # Check password
     if not verify_password(payload.password, user.hashed_password):
+        print(f"DEBUG: password verification failed for {email}")
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= 5:
             user.locked_until = now + timedelta(minutes=15)
         db.commit()
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
 
     # Reset lockout and set last_login
     user.failed_login_attempts = 0
@@ -112,8 +118,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         httponly=True,
         max_age=max_age_seconds,
         expires=max_age_seconds,
-        samesite="none",
-        secure=True
+        samesite=COOKIE_SAMESITE,
+        secure=COOKIE_SECURE
     )
     return response
 
@@ -129,7 +135,7 @@ def me(current_user: User = Depends(get_current_user)):
 @router.post("/logout/")
 def logout():
     response = JSONResponse(content={"message": "Logout successful"})
-    response.delete_cookie(key="access_token", samesite="none", secure=True)
+    response.delete_cookie(key="access_token", samesite=COOKIE_SAMESITE, secure=COOKIE_SECURE)
     return response
 
 class ChangePasswordRequest(BaseModel):

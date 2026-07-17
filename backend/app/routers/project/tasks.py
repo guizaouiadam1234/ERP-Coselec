@@ -2,7 +2,7 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security.auth import check_permission, get_current_user
@@ -11,7 +11,7 @@ from app.models.project.project import Project
 from app.modules.users.models.employee import Employee
 from app.models.project.task import Task, TaskStatus
 from app.models.hr.document import TaskDocument
-from app.services.storage import save_file_locally
+from app.services.storage import upload_file_to_minio, get_file_url_from_minio, delete_file_from_minio
 router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
 #GET
@@ -112,7 +112,7 @@ def upload_task_documents(
         unique_filename = f"task_{task_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
 
         try:
-            storage_path = save_file_locally(file, unique_filename)
+            storage_path = upload_file_to_minio(file, unique_filename)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(exc)}")
 
@@ -151,14 +151,11 @@ def download_task_document(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document de tâche introuvable")
 
-    if not os.path.isfile(doc.storage_path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fichier introuvable")
-
-    return FileResponse(
-        path=doc.storage_path,
-        media_type=doc.mime_type or "application/octet-stream",
-        filename=doc.file_name,
-    )
+    try:
+        url = get_file_url_from_minio(doc.storage_path)
+        return RedirectResponse(url)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fichier introuvable sur le stockage cloud")
 
 
 @router.delete("/documents/{document_id}", status_code=status.HTTP_200_OK)
@@ -176,6 +173,8 @@ def delete_task_document(
     )
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document de tâche introuvable")
+
+    delete_file_from_minio(doc.storage_path)
 
     db.delete(doc)
     db.commit()

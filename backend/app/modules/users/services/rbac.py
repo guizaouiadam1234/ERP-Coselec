@@ -267,7 +267,18 @@ def ensure_admin_role_for_email(db: Session, email: str | None = None) -> None:
 
     user = db.query(User).filter(User.email == target_email).first()
     if not user:
-        return
+        from app.core.security.auth import hash_password
+        user = User(
+            name="Admin Bootstrap",
+            email=target_email,
+            hashed_password=hash_password("admin123"),
+            is_active=True,
+            requires_password_change=False
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
     ensure_rbac_setup(db)
     assign_role_to_user(db, user, "Admin")
+

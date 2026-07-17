@@ -32,6 +32,12 @@ def _require_secret_key() -> str:
     )
 
 
+# Cookie settings (default to False/lax for local HTTP development)
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "False").lower() in ("true", "1", "yes")
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
+
+
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 

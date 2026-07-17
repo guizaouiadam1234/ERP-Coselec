@@ -1,24 +1,40 @@
 import os
+from datetime import timedelta
 from minio import Minio
 
-BUCKET_NAME = "coselec-hr-documents"
-
+BUCKET_NAME = os.getenv("MINIO_BUCKET", "erp-documents")
 
 def get_minio_client() -> Minio:
     endpoint = os.getenv("MINIO_ENDPOINT")
     if not endpoint:
         raise RuntimeError(
-            "MINIO_ENDPOINT is not configured. Set it before uploading documents."
+            "MINIO_ENDPOINT is not configured. Set it in .env to use Cloud Storage."
         )
+
+    # Cloudflare R2 endpoints usually require HTTPS (secure=True)
+    is_secure = os.getenv("MINIO_SECURE", "true").lower() == "true"
+    
+    # Optional region (often "auto" for Cloudflare R2)
+    region = os.getenv("MINIO_REGION", "auto")
+
+    # If the endpoint starts with http:// or https://, we must strip it for the minio client
+    if endpoint.startswith("http://"):
+        endpoint = endpoint[7:]
+        is_secure = False
+    elif endpoint.startswith("https://"):
+        endpoint = endpoint[8:]
+        is_secure = True
 
     return Minio(
         endpoint,
-        access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
-        secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
-        secure=False,
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
+        region=region,
+        secure=is_secure,
     )
 
-def upload_file_to_minio(file, file_name):
+def upload_file_to_minio(file, file_name: str) -> str:
+    """Uploads a file to the S3 compatible cloud storage (e.g. Cloudflare R2)"""
     minio_client = get_minio_client()
 
     if not minio_client.bucket_exists(BUCKET_NAME):
@@ -36,13 +52,25 @@ def upload_file_to_minio(file, file_name):
         part_size=10*1024*1024,
         content_type=file.content_type
     )
-    return f"{BUCKET_NAME}/{file_name}"
+    # Return just the file_name, we don't need BUCKET_NAME in the path
+    # since we use BUCKET_NAME explicitly in other functions.
+    return file_name
 
-def save_file_locally(file, file_name):
-    local_path = os.path.join("uploads", file_name)
-    os.makedirs(os.path.dirname(local_path), exist_ok=True)
-    
-    with open(local_path, "wb") as f:
-        f.write(file.file.read())
-    
-    return local_path
+def get_file_url_from_minio(file_name: str) -> str:
+    """Generates a presigned URL to download a file securely, valid for 1 hour."""
+    minio_client = get_minio_client()
+    url = minio_client.get_presigned_url(
+        "GET",
+        BUCKET_NAME,
+        file_name,
+        expires=timedelta(hours=1),
+    )
+    return url
+
+def delete_file_from_minio(file_name: str):
+    """Deletes a file from the S3 compatible cloud storage."""
+    minio_client = get_minio_client()
+    try:
+        minio_client.remove_object(BUCKET_NAME, file_name)
+    except Exception as e:
+        print(f"Error deleting file {file_name} from MinIO: {e}")
