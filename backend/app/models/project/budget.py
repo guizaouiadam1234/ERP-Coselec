@@ -1,0 +1,19 @@
+import enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from app.core.database import Base
+
+class ProjectBudget(Base):
+    __tablename__ = "project_budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    
+    category = Column(String(100), nullable=False)
+    allocated_amount = Column(Float(12, 2), default=0.0)
+    currency = Column(String(10), default="XOF")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project", back_populates="budgets")
+    expenses = relationship("ProjectExpense", back_populates="budget", cascade="all, delete-orphan")

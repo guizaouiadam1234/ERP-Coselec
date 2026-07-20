@@ -56,6 +56,13 @@ class StockMovement(Base):
         default=datetime.utcnow
     )
 
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id"),
+        nullable=True
+    )
+
     product = relationship("Product")
     warehouse = relationship("Warehouse")
     partner = relationship("Partner")
+    project = relationship("Project")

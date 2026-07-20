@@ -9,6 +9,7 @@ class AttendanceUpdate(BaseModel):
     date: date
     status: str
     notes: Optional[str] = None
+    project_id: Optional[int] = None
 
     class Config:
         from_attributes = True

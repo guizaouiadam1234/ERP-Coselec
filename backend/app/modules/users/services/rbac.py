@@ -126,6 +126,14 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
     "Responsable Projet": {
         "description": "Suivi projet et demandes associees",
         "permissions": {
+            "projects.read",
+            "projects.create",
+            "projects.update",
+            "projects.delete",
+            "tasks.read",
+            "tasks.create",
+            "tasks.update",
+            "tasks.delete",
             "it_requests.read",
             "it_requests.update",
             "stock.read",

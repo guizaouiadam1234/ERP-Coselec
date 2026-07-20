@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from datetime import date
 from typing import List, Optional
 from app.models.project.project import ProjectStatus
@@ -13,7 +13,7 @@ class ProjectBase(BaseModel):
     budget_estime: Optional[float] = 0.0
 
 class ProjectCreate(ProjectBase):
-    pass 
+    status: Optional[ProjectStatus] = ProjectStatus.STUDY
 
 class ProjectResponse(ProjectBase):
     id: int
@@ -23,6 +23,26 @@ class ProjectResponse(ProjectBase):
     budget_engage: Optional[float] = 0.0
     
     partners: List[PartnerResponse] = Field(default_factory=list)
+
+    @computed_field
+    def client_name(self) -> Optional[str]:
+        return getattr(self, "client", None).name if getattr(self, "client", None) else None
+
+    @computed_field
+    def budget_consumed(self) -> float:
+        return sum(e.amount for e in self.expenses) if getattr(self, "expenses", None) else 0.0
+
+    @computed_field
+    def employees_count(self) -> int:
+        return len(set(a.employee_id for a in self.attendances)) if getattr(self, "attendances", None) else 0
+
+    @computed_field
+    def current_phase(self) -> Optional[str]:
+        if getattr(self, "phases", None):
+            for phase in self.phases:
+                if getattr(phase, "status", None) == "In Progress": # Checking based on assumed phase status
+                    return phase.nom
+        return None
 
     model_config = ConfigDict(from_attributes=True)
 

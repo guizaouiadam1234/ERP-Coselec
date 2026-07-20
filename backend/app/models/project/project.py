@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Table, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, Table, Float, ForeignKey, Boolean, Text, Enum as SQLEnum
 import enum
 from sqlalchemy.orm import relationship
 from app.models.relations import project_partners
@@ -25,6 +25,13 @@ class Project(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     code = Column(String(10), nullable=False, unique=True)
     nom = Column(String(255), nullable=False)
+    status = Column(SQLEnum(ProjectStatus), default=ProjectStatus.STUDY, nullable=False)
+    project_type = Column(String(100), nullable=True)
+    description = Column(Text, nullable=True)
+    is_archived = Column(Boolean, default=False)
+    
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    chef_projet_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
     
     #champs de dates
     date_debut_estimee = Column(Date, nullable=False)
@@ -43,4 +50,10 @@ class Project(Base):
         secondary=project_partners, 
         back_populates="projects"
     )
-    
+    client = relationship("Client")
+    chef_projet = relationship("Employee")
+    phases = relationship("ProjectPhase", back_populates="project", cascade="all, delete-orphan")
+    milestones = relationship("ProjectMilestone", back_populates="project", cascade="all, delete-orphan")
+    budgets = relationship("ProjectBudget", back_populates="project", cascade="all, delete-orphan")
+    expenses = relationship("ProjectExpense", back_populates="project", cascade="all, delete-orphan")
+    attendances = relationship("Attendance", overlaps="project")

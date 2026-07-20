@@ -134,13 +134,15 @@ def update_attendance_slot(
         else:
             existing_record.status = status_enum.value
             existing_record.notes = payload.notes
+            existing_record.project_id = payload.project_id
     else:
         if status_enum != AttendanceStatus.SITE:
             new_record = Attendance(
                 employee_id=payload.employee_id,
                 date=datetime.combine(payload.date, time.min),
                 status=status_enum.value,
-                notes=payload.notes
+                notes=payload.notes,
+                project_id=payload.project_id
             )
             db.add(new_record)
             

@@ -8,7 +8,7 @@ class FacilityRequestBase(BaseModel):
     request_type: FacilityRequestType
 
 class FacilityRequestCreate(FacilityRequestBase):
-    pass
+    project_id: int | None = None
 
 class FacilityRequestStatusUpdate(BaseModel):
     status: FacilityRequestStatus

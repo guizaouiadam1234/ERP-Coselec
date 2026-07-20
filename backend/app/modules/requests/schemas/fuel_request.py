@@ -7,6 +7,7 @@ class FuelRequestCreate(BaseModel):
     request_date: date
     affaire_no: Optional[str] = None
     dossier_no: Optional[str] = None
+    project_id: Optional[int] = None
     
     objet_deplacement: str
     vehicule_matricule: str

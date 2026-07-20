@@ -28,6 +28,7 @@ class TaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     due_date: date
+    start_date: date | None = None
 
     author_id: int
     assignee_id: int | None

@@ -7,7 +7,7 @@ class ITRequestBase(BaseModel):
     description: str
 
 class ITRequestCreate(ITRequestBase):
-    pass
+    project_id: int | None = None
 
 class ITRequestStatusUpdate(BaseModel):
     status: ITRequestStatus

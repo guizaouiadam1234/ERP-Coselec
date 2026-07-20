@@ -3,6 +3,8 @@ from app.core.database import SessionLocal #
 from app.models.hr.document import EmployeeDocument
 from app.services.notification import create_notification #
 from app.models.notification import NotificationType
+from app.modules.users.models.user import User
+from app.modules.users.models.role import Role
 
 def check_document_expirations():
     db = SessionLocal() #
@@ -16,19 +18,22 @@ def check_document_expirations():
             EmployeeDocument.expiry_date > today
         ).all()
 
-        for doc in expiring_docs:
-            days_left = (doc.expiry_date - today).days
-            urgency = "ROUGE" if days_left <= 90 else "ORANGE"
-            
-            message = f"[{urgency}] Le document {doc.category.value} de l'employé #{doc.employee_id} expire dans {days_left} jours."
-            
-            # Cibler l'ID du responsable RH. On suppose user_id=1 pour l'exemple.
-            create_notification(
-                db=db,
-                user_id=1, 
-                message=message,
-                type=NotificationType.INFO,
-                reference_id=doc.id #
-            )
+        if expiring_docs:
+            rh_users = db.query(User).filter(User.roles.any(Role.name == "RH")).all()
+
+            for doc in expiring_docs:
+                days_left = (doc.expiry_date - today).days
+                urgency = "ROUGE" if days_left <= 90 else "ORANGE"
+                
+                message = f"[{urgency}] Le document {doc.category.value} de l'employé #{doc.employee_id} expire dans {days_left} jours."
+                
+                for rh_user in rh_users:
+                    create_notification(
+                        db=db,
+                        user_id=rh_user.id, 
+                        message=message,
+                        type=NotificationType.INFO,
+                        reference_id=doc.id #
+                    )
     finally:
         db.close() #

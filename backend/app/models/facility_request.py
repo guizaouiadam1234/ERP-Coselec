@@ -29,6 +29,8 @@ class FacilityRequest(Base):
     attachment_id = Column(Integer, nullable=True)
     rejection_comment = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
 
     creator = relationship("User", foreign_keys=[creator_id], back_populates="created_facility_requests")
     assigned_to = relationship("User", foreign_keys=[assigned_to_id], back_populates="assigned_facility_requests")
+    project = relationship("Project")

@@ -50,8 +50,11 @@ class FuelRequest(Base):
     rejection_comment = Column(String, nullable=True)
     is_deleted = Column(Boolean, default=False)
 
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+
     # Relationships
     employee = relationship("Employee", foreign_keys=[employee_id])
     manager = relationship("User", foreign_keys=[manager_id])
     logistics_validator = relationship("User", foreign_keys=[logistics_validator_id])
     finance_validator = relationship("User", foreign_keys=[finance_validator_id])
+    project = relationship("Project", foreign_keys=[project_id])

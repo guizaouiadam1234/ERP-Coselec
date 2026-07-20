@@ -114,6 +114,37 @@ const routes = [
     name: "admin-users",
     component: () => import("@/views/Admin/UsersView.vue"),
     meta: { requiredRoles: ["Admin"] }
+  },
+  // Missing Task 2 Views
+  {
+    path: "/portfolio",
+    name: "portfolio",
+    component: () => import("../views/PortfolioView.vue"),
+    meta: { requiredRoles: ["Admin", "Direction", "Finance", "Responsable Projet"] }
+  },
+  {
+    path: "/project-budget",
+    name: "project-budget",
+    component: () => import("../views/ProjectBudgetView.vue"),
+    meta: { requiredRoles: ["Admin", "Direction", "Finance", "Responsable Projet"] }
+  },
+  {
+    path: "/procurement",
+    name: "procurement",
+    component: () => import("../views/ProcurementView.vue"),
+    meta: { requiredRoles: ["Admin", "Logistique", "Finance", "Responsable Projet"] }
+  },
+  {
+    path: "/stock-reservations",
+    name: "stock-reservations",
+    component: () => import("../views/StockReservationView.vue"),
+    meta: { requiredRoles: ["Admin", "Stock / Logistique", "Responsable Projet"] }
+  },
+  {
+    path: "/project-dashboard",
+    name: "project-dashboard",
+    component: () => import("../views/ProjectDashboardView.vue"),
+    meta: { requiredRoles: ["Admin", "Responsable Projet", "Direction"] }
   }
 
 ];

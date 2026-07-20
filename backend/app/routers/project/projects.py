@@ -73,7 +73,13 @@ def get_projects(
     db:Session = Depends(get_db),
     user_permissions = Depends(check_permission("projects.read"))
 ):
-    return db.query(Project).all()
+    from sqlalchemy.orm import joinedload
+    return db.query(Project).options(
+        joinedload(Project.client),
+        joinedload(Project.expenses),
+        joinedload(Project.phases),
+        joinedload(Project.attendances)
+    ).all()
  
 @router.get("/{project_id}", response_model=ProjectResponse, status_code=status.HTTP_200_OK)
 def get_project(
@@ -81,7 +87,13 @@ def get_project(
     db:Session = Depends(get_db),
     user_permissions=Depends(check_permission("projects.read")),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    from sqlalchemy.orm import joinedload
+    project = db.query(Project).options(
+        joinedload(Project.client),
+        joinedload(Project.expenses),
+        joinedload(Project.phases),
+        joinedload(Project.attendances)
+    ).filter(Project.id == project_id).first()
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project non trouvé")
     return project
@@ -111,7 +123,7 @@ def delete_project(project_id: int, db : Session= Depends(get_db), user_permissi
     project = db.query(Project).filter(Project.id == project_id).first()
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projet non trouvé")
-    project.status = ProjectStatus.CANCELLED
+    project.status = ProjectStatus.CANCELED
     db.commit()
     return {"message" : "Project supprimé"}
 
@@ -135,3 +147,68 @@ def remove_partner_from_project(
 
     project.partners.remove(partner)
     db.commit()
+
+from app.models.project.phase import PhaseStatus
+from app.models.project.task import Task, TaskStatus
+from datetime import date
+from collections import defaultdict
+from sqlalchemy.orm import joinedload
+
+@router.get("/{project_id}/dashboard", status_code=status.HTTP_200_OK)
+def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
+    project = db.query(Project).options(
+        joinedload(Project.expenses),
+        joinedload(Project.phases),
+        joinedload(Project.budgets)
+    ).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+
+    # 1. Budget Consommé
+    total_budget = sum(b.allocated_amount for b in project.budgets) if project.budgets else (project.budget_estime or 0.0)
+    total_expenses = sum(e.amount for e in project.expenses) if project.expenses else 0.0
+    budget_consumed_percent = round((total_expenses / total_budget * 100), 2) if total_budget > 0 else 0.0
+
+    # 2. Phases Terminées
+    total_phases = len(project.phases)
+    completed_phases = len([p for p in project.phases if p.status == PhaseStatus.COMPLETED])
+    phases_str = f"{completed_phases}/{total_phases}"
+
+    # 3. Jours Restants
+    today = date.today()
+    days_remaining = (project.date_fin_estimee - today).days if project.date_fin_estimee else 0
+    days_remaining = max(0, days_remaining) # Avoid negative if overdue
+
+    # 4. Tâches Ouvertes
+    open_tasks = db.query(Task).filter(Task.project_id == project_id, Task.status != TaskStatus.DONE).count()
+
+    # 5. Financial Data
+    current_year = today.year
+    expenses_this_year = [e for e in project.expenses if e.date_incurred and e.date_incurred.year == current_year]
+    
+    monthly_expenses = defaultdict(float)
+    for e in expenses_this_year:
+        monthly_expenses[e.date_incurred.month] += e.amount
+
+    french_months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+    chart_labels = []
+    chart_data = []
+    for month in range(1, 13):
+        chart_labels.append(french_months[month-1])
+        chart_data.append(monthly_expenses[month])
+
+    return {
+        "kpis": [
+            { "title": "Budget Consommé", "value": f"{budget_consumed_percent}%", "color": "text-blue-600", "bg": "bg-blue-50" },
+            { "title": "Phases Terminées", "value": phases_str, "color": "text-green-600", "bg": "bg-green-50" },
+            { "title": "Jours Restants", "value": str(days_remaining), "color": "text-amber-600", "bg": "bg-amber-50" },
+            { "title": "Tâches Ouvertes", "value": str(open_tasks), "color": "text-red-600", "bg": "bg-red-50" },
+        ],
+        "financial_chart": {
+            "labels": chart_labels,
+            "data": chart_data,
+            "total_budget": total_budget,
+            "total_expenses": total_expenses
+        }
+    }

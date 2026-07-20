@@ -38,6 +38,10 @@ from app.routers.notifications import router as notifications_router
 #projects routers
 from app.routers.project.projects import router as projects_router
 from app.routers.project.tasks import router as tasks_router
+from app.routers.project.budget import router as budgets_router
+from app.routers.procurement import router as procurement_router
+from app.routers.stock_reservations import router as stock_reservations_router
+from app.routers.portfolio import router as portfolio_router
 
 from app.core.security.auth import (
     get_current_user,
@@ -58,8 +62,21 @@ from app.models.stock.product import Product
 from app.models.stock.stock import Stock
 from app.models.stock.stockmovement import StockMovement
 from app.models.stock.warehouse import Warehouse
-from app.models.notification import NotificationType
+from app.models.notification import NotificationType, Notification
+from app.models.it_request import ITRequest
+from app.models.facility_request import FacilityRequest
+from app.models.hr.hr_request import HRRequest
+from app.models.hr.leave_request import LeaveRequest
+from app.models.hr.contract import Contract
+from app.models.hr.document import EmployeeDocument
 from app.modules.requests.models.fuel_request import FuelRequest
+from app.models.project.project import Project
+from app.models.project.client import Client
+from app.models.project.phase import ProjectPhase
+from app.models.project.milestone import ProjectMilestone
+from app.models.project.budget import ProjectBudget
+from app.models.project.expense import ProjectExpense
+from app.models.hr.attendance import Attendance
 
 from app.services.notification import create_notification
 from app.modules.users.services.rbac import (
@@ -94,9 +111,12 @@ from app.routers.caisse import router as caisse_router
 from app.routers.departments import router as departments_router
 from app.routers.leave_requests import router as leave_requests_router
 
+from app.routers.dashboard import router as app_dashboard_router
+
 app.include_router(employees_router)
 app.include_router(stocks_router)
 app.include_router(stock_operations_router)
+app.include_router(app_dashboard_router)
 app.include_router(dashboard_router)
 app.include_router(stock_movements_router)
 app.include_router(products_router)
@@ -112,6 +132,10 @@ app.include_router(hr_requests_router)
 app.include_router(documents_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
+app.include_router(budgets_router)
+app.include_router(procurement_router)
+app.include_router(stock_reservations_router)
+app.include_router(portfolio_router)
 app.include_router(auth_router)
 app.include_router(fuel_requests_router)
 app.include_router(caisse_router)
@@ -127,7 +151,8 @@ default_origins = [
     "http://0.0.0.0:5173",
     "http://192.190.100.41:5173",
     "http://192.190.100.48:5173",
-    "http://192.190.100.104:5173"
+    "http://192.190.100.104:5173",
+    "http://localhost"
 ]
 allow_origins = [
     origin.strip().rstrip("/")

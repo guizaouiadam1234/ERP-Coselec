@@ -17,4 +17,7 @@ class Attendance(Base):
     status = Column(String, nullable=False)
     date = Column(DateTime, nullable=False)
     notes = Column(String, nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    
     employee = relationship("Employee", back_populates="attendances")
+    project = relationship("Project")

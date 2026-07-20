@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from app.core.database import get_db
 from app.modules.users.models.user import User
+from app.modules.users.models.role import Role
+from sqlalchemy.orm import joinedload
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BASE_DIR / ".env")
@@ -106,7 +108,9 @@ def get_current_user(
     except (JWTError, ValueError, TypeError):
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).options(
+        joinedload(User.roles).joinedload(Role.permissions)
+    ).filter(User.id == user_id).first()
 
     if user is None:
         raise credentials_exception

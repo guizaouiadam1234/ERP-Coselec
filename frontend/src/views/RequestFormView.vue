@@ -182,8 +182,13 @@ const submitRequest = async () => {
       });
     } else if (props.section === 'hr') {
       const today = new Date().toISOString().split('T')[0];
+      // Fetch employees to get a valid ID instead of hardcoding
+      const employeesRes = await api.get('/employees/');
+      const employeeId = employeesRes.data.length > 0 ? employeesRes.data[0].id : null;
+      if (!employeeId) throw new Error('No employees available');
+
       await api.post('/hr-requests/', {
-        employee_id: 1, // Fallback, would need actual employee selector
+        employee_id: employeeId,
         request_type: 'Leave',
         start_date: today,
         end_date: today
