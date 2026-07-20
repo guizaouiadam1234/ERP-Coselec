@@ -166,8 +166,8 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Projet non trouvé")
 
     # 1. Budget Consommé
-    total_budget = sum(b.allocated_amount for b in project.budgets) if project.budgets else (project.budget_estime or 0.0)
-    total_expenses = sum(e.amount for e in project.expenses) if project.expenses else 0.0
+    total_budget = float(sum(b.allocated_amount for b in project.budgets)) if project.budgets else float(project.budget_estime or 0.0)
+    total_expenses = float(sum(e.amount for e in project.expenses)) if project.expenses else 0.0
     budget_consumed_percent = round((total_expenses / total_budget * 100), 2) if total_budget > 0 else 0.0
 
     # 2. Phases Terminées
@@ -189,7 +189,7 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
     
     monthly_expenses = defaultdict(float)
     for e in expenses_this_year:
-        monthly_expenses[e.date_incurred.month] += e.amount
+        monthly_expenses[e.date_incurred.month] += float(e.amount)
 
     french_months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
     chart_labels = []
