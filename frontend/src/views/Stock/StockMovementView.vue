@@ -13,8 +13,25 @@
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-red-200 border-t-red-600"></div>
+        <span class="text-sm text-gray-500 font-medium">Chargement…</span>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="errorMessage" class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-4 text-center max-w-md">
+        <span class="material-symbols-outlined text-4xl text-red-400">error_outline</span>
+        <p class="text-sm text-red-600 font-medium">{{ errorMessage }}</p>
+        <button @click="initPage" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">Réessayer</button>
+      </div>
+    </div>
+
     <!-- Layout Split Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       
       <!-- Form Container Card -->
       <div class="bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden">
@@ -120,11 +137,12 @@
           </div>
 
           <!-- Validation Submission Action Button -->
-          <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center space-x-2 mt-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <button type="submit" :disabled="isSubmitting" class="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center space-x-2 mt-2">
+            <div v-if="isSubmitting" class="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
-            <span>Valider le mouvement</span>
+            <span>{{ isSubmitting ? 'Enregistrement…' : 'Valider le mouvement' }}</span>
           </button>
         </form>
       </div>
@@ -212,9 +230,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
-import axios from 'axios';
 import { StockService } from '@/services/stock';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { useToast } from '@/composables/useToast';
+import axios from 'axios';
 
 type MovementType = 'ENTRY' | 'EXIT';
 
@@ -263,7 +282,10 @@ interface MovementForm {
 
 // --- UI / UX State Control ---
 const isLoading = ref(false);
+const isSubmitting = ref(false);
+const errorMessage = ref('');
 const isInternalMovement = ref(true); // Defaults to Coselec internal handling
+const toast = useToast();
 
 // --- Backend Data Stores ---
 const categories = ref<Category[]>([]);
@@ -347,6 +369,7 @@ const form = reactive<MovementForm>({
 // --- Fetch App State Data Rows On Mount ---
 const initPage = async () => {
   isLoading.value = true;
+  errorMessage.value = '';
   try {
     const [catRes, prodRes, whRes, partRes, movRes] = await Promise.all([
       StockService.getCategories(),
@@ -361,8 +384,8 @@ const initPage = async () => {
     warehouses.value = whRes.data;
     partners.value = partRes.data;
     movements.value = movRes.data;
-  } catch (error) {
-    console.error("Erreur lors du chargement des données initiales", error);
+  } catch {
+    errorMessage.value = "Impossible de charger les données. Vérifiez votre connexion.";
   } finally {
     isLoading.value = false;
   }
@@ -378,8 +401,8 @@ watch(selectedCategoryId, async (newCategoryId) => {
   try {
     const prodRes = await StockService.getProducts(Number(newCategoryId));
     products.value = prodRes.data;
-  } catch (error) {
-    console.error("Erreur lors du chargement des produits par catégorie", error);
+  } catch {
+    toast.error("Erreur lors du chargement des produits.");
   }
 });
 
@@ -442,12 +465,12 @@ const sortedMovements = computed(() => {
 // --- Form Validation & Submission ---
 const submitMovement = async () => {
   if (!form.product_id || !form.warehouse_id || form.quantity < 1) {
-    alert("Veuillez remplir correctement tous les champs obligatoires.");
+    toast.error("Veuillez remplir correctement tous les champs obligatoires.");
     return;
   }
 
   if (!isInternalMovement.value && !form.partner_id) {
-    alert("Veuillez sélectionner une entreprise partenaire.");
+    toast.error("Veuillez sélectionner une entreprise partenaire.");
     return;
   }
 
@@ -455,6 +478,7 @@ const submitMovement = async () => {
     ? (getInternalPartnerId() ?? null)
     : Number(form.partner_id);
 
+  isSubmitting.value = true;
   try {
     const payload = {
       product_id: Number(form.product_id),
@@ -477,19 +501,20 @@ const submitMovement = async () => {
     const movRes = await StockService.getMovements();
     movements.value = movRes.data;
     
-    alert("Le mouvement de stock a bien été enregistré !");
+    toast.success("Le mouvement de stock a bien été enregistré !");
   } catch (error) {
-    console.error("Erreur lors de la validation du mouvement", error);
     if (axios.isAxiosError(error)) {
       const backendMessage =
         typeof error.response?.data?.detail === 'string'
           ? error.response.data.detail
-          : "Impossible d'enregistrer l'opération backend.";
-      alert(backendMessage);
+          : "Impossible d'enregistrer l'opération.";
+      toast.error(backendMessage);
       return;
     }
 
-    alert("Impossible d'enregistrer l'opération backend.");
+    toast.error("Impossible d'enregistrer l'opération.");
+  } finally {
+    isSubmitting.value = false;
   }
 };
 

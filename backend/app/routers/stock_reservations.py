@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.stock.reservation import ProjectStockReservation, ReservationStatus
 from app.models.stock.stock import Stock
@@ -49,9 +50,13 @@ def create_reservation(res: ReservationCreate, db: Session = Depends(get_db)):
     # Deduct available stock
     stock.quantity -= res.quantity
     
-    db.commit()
-    db.refresh(db_res)
-    return db_res
+    try:
+        db.commit()
+        db.refresh(db_res)
+        return db_res
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Identifiant invalide (projet, produit ou employé introuvable)")
 
 @router.post("/{reservation_id}/consume", response_model=ReservationResponse)
 def consume_reservation(reservation_id: int, db: Session = Depends(get_db)):
@@ -65,6 +70,10 @@ def consume_reservation(reservation_id: int, db: Session = Depends(get_db)):
     db_res.status = ReservationStatus.CONSUMED
     db_res.consumed_at = datetime.utcnow()
     
-    db.commit()
-    db.refresh(db_res)
-    return db_res
+    try:
+        db.commit()
+        db.refresh(db_res)
+        return db_res
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Impossible de consommer la réservation")

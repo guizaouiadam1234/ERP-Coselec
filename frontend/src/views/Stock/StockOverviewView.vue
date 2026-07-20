@@ -55,6 +55,7 @@ interface StructuredInventoryItem {
 type SortDirection = 'asc' | 'desc';
 
 const isLoading = ref(false);
+const errorMessage = ref('');
 const searchQuery = ref('');
 const tableScrollRef = ref<HTMLDivElement | null>(null);
 const tableElementRef = ref<HTMLTableElement | null>(null);
@@ -307,9 +308,9 @@ const syncTableScrollSoon = async () => {
   syncMiniScrollMetrics();
 };
 
-// Mock / Initializer Data fetch
 const initOverview = async () => {
   isLoading.value = true;
+  errorMessage.value = '';
   try {
     const [catRes, prodRes, whRes, partRes, stockRes] = await Promise.all([
       StockService.getCategories(),
@@ -323,25 +324,9 @@ const initOverview = async () => {
     products.value = prodRes.data;
     warehouses.value = whRes.data;
     partners.value = partRes.data;
-
     inventoryRaw.value = stockRes.data;
-  } catch (error) {
-    console.error("Erreur d'initialisation de la vue d'ensemble", error);
-    
-    // Dynamic fallback UI demonstration lines if backend table is empty
-    inventoryRaw.value = [
-      { id: 10, product_id: 1, warehouse_id: 1, partner_id: null, quantity: 140 },
-      { id: 11, product_id: 1, warehouse_id: 2, partner_id: 2, quantity: 45 },
-      { id: 12, product_id: 2, warehouse_id: 1, partner_id: null, quantity: 85 },
-      { id: 13, product_id: 3, warehouse_id: null, partner_id: null, quantity: 12 }
-    ];
-    products.value = [
-      { id: 1, designation: 'Câble Électrique RO2V 3G1.5', code: 'CAB-3G15' },
-      { id: 2, designation: 'Disjoncteur Schneider 16A', code: 'DISJ-16A' },
-      { id: 3, designation: 'Projecteur LED 50W IP65', code: 'PROJ-50W' }
-    ];
-    warehouses.value = [{ id: 1, name: 'Dépôt Principal (Dakar)' }, { id: 2, name: 'Zone Transit Almadies' }];
-    partners.value = [{ id: 2, name: 'Belmet' }];
+  } catch {
+    errorMessage.value = "Impossible de charger les données de stock. Vérifiez votre connexion et réessayez.";
   } finally {
     isLoading.value = false;
   }
@@ -517,8 +502,25 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex flex-1 items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-red-200 border-t-red-600"></div>
+        <span class="text-sm text-gray-500 font-medium">Chargement des stocks…</span>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="errorMessage" class="flex flex-1 items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-4 text-center max-w-md">
+        <span class="material-symbols-outlined text-4xl text-red-400">error_outline</span>
+        <p class="text-sm text-red-600 font-medium">{{ errorMessage }}</p>
+        <button @click="initOverview" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">Réessayer</button>
+      </div>
+    </div>
+
     <!-- Big Matrix Overview Card -->
-    <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-red-100 bg-white shadow-xs">
+    <div v-else class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-red-100 bg-white shadow-xs">
       <div ref="tableScrollRef" class="stock-table-scroll min-h-0 flex-1 overflow-x-auto overflow-y-auto pb-2">
         <table ref="tableElementRef" class="w-max min-w-full text-left border-separate border-spacing-0" :style="{ minWidth: `${enforcedTableMinWidth}px` }">
           <thead>

@@ -91,7 +91,7 @@ const zoomLevels = [
   { label: 'Tout', days: 0 },
 ];
 const zoomIndex = ref(6); // Default: show all
-const zoomLevelLabel = computed(() => zoomLevels[zoomIndex.value].label);
+const zoomLevelLabel = computed(() => zoomLevels[zoomIndex.value]?.label || '');
 
 const zoomIn = () => { if (zoomIndex.value > 0) zoomIndex.value--; };
 const zoomOut = () => { if (zoomIndex.value < zoomLevels.length - 1) zoomIndex.value++; };
@@ -100,7 +100,7 @@ const zoomReset = () => { zoomIndex.value = 6; };
 // ── Chart width (increases when zoomed in for scrollability) ──
 const chartWidth = computed(() => {
   const level = zoomLevels[zoomIndex.value];
-  if (level.days === 0) return '100%';
+  if (!level || level.days === 0) return '100%';
   // Make the chart wider when zoomed so bars are bigger
   const totalDays = dataDaySpan.value;
   if (totalDays <= 0) return '100%';
@@ -229,7 +229,7 @@ const dataDaySpan = computed(() => {
 
 const visibleStart = computed(() => {
   const level = zoomLevels[zoomIndex.value];
-  if (level.days === 0) {
+  if (!level || level.days === 0) {
     // Show all: add 2-day padding
     const d = new Date(dataMinTime.value);
     d.setDate(d.getDate() - 2);
@@ -248,7 +248,7 @@ const visibleStart = computed(() => {
 
 const visibleEnd = computed(() => {
   const level = zoomLevels[zoomIndex.value];
-  if (level.days === 0) {
+  if (!level || level.days === 0) {
     const d = new Date(dataMaxTime.value);
     d.setDate(d.getDate() + 2);
     return formatDateString(d);

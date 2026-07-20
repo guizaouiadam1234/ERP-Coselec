@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import LoginView from "./views/LoginView.vue";
-import HomeView from "./views/HomeView.vue";
+import ToastContainer from './components/ToastContainer.vue';
 </script>
 
 <template>
   <router-view />
+  <ToastContainer />
 </template>

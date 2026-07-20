@@ -23,15 +23,21 @@
           <div class="flex border border-red-500 rounded-lg overflow-hidden">
             <button 
               @click="currentView = 'Kanban'" 
-              :class="{'bg-red-500 text-white': currentView === 'Kanban'}" 
-              class="px-4 py-2 hover:bg-red-50">
+              :class="{'bg-red-500 text-white': currentView === 'Kanban', 'text-red-600': currentView !== 'Kanban'}" 
+              class="px-4 py-2 hover:bg-red-50 font-medium transition-colors">
               Kanban
             </button>
             <button 
               @click="currentView = 'Gantt'" 
-              :class="{'bg-red-500 text-white': currentView === 'Gantt'}" 
-              class="px-4 py-2 hover:bg-red-50">
+              :class="{'bg-red-500 text-white': currentView === 'Gantt', 'text-red-600': currentView !== 'Gantt'}" 
+              class="px-4 py-2 hover:bg-red-50 font-medium transition-colors border-l border-red-500">
               Gantt
+            </button>
+            <button 
+              @click="currentView = 'Ressources'" 
+              :class="{'bg-red-500 text-white': currentView === 'Ressources', 'text-red-600': currentView !== 'Ressources'}" 
+              class="px-4 py-2 hover:bg-red-50 font-medium transition-colors border-l border-red-500">
+              Ressources
             </button>
           </div>
         </div>
@@ -51,8 +57,13 @@
   :employees-list="employees"
   @update-task="handleTaskUpdate"
   />
+  <ProjectResources
+    v-else-if="currentView === 'Ressources'"
+    key="resources-layout"
+    :project-id="resolveActiveProjectId()"
+  />
   <div v-else key="empty-fallback-layout" class="text-gray-400 text-center py-8">
-    Sélectionnez une vue pour afficher les tâches du projet.
+    Sélectionnez une vue pour afficher les données du projet.
   </div>
   </div>
     <TaskCreateModal
@@ -72,7 +83,8 @@ import { employeeService } from '@/services/employees';
 import AppLayout from "@/layouts/AppLayout.vue";
 import GanttView from '@/components/project/GanttView.vue';
 import KanbanView from '@/components/project/KanbanView.vue';
-import { shallowRef, ref, onMounted } from 'vue';
+import ProjectResources from '@/components/project/ProjectResources.vue';
+import { shallowRef, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import TaskCreateModal from "@/components/project/TaskCreateModal.vue";
 const route = useRoute();
@@ -85,7 +97,7 @@ interface Project {
 const tasks = ref([]);
 const projects = ref<Project[]>([]);
 const employees = ref([]);
-const currentView = shallowRef('Table');
+const currentView = shallowRef('Kanban');
 const selectedProject = ref<string | null>(null);
 const isTaskCreateModalOpen = ref(false);
 
@@ -267,6 +279,11 @@ onMounted(async () => {
     try {
         const projectResponse = await projectService.getAllProjects();
         projects.value = projectResponse.data;
+        
+        if (projects.value.length > 0 && !selectedProject.value) {
+            selectedProject.value = projects.value[0]?.nom || null;
+            await loadTasks();
+        }
         
         const empResponse = await employeeService.getAllEmployees();
         employees.value = empResponse.data || [];

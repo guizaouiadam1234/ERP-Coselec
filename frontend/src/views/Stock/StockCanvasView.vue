@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { StockService } from '@/services/stock';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { useToast } from '@/composables/useToast';
 
 interface Category {
   id: number;
@@ -24,6 +25,8 @@ interface CanvasBoard extends Category {
 }
 
 const isLoading = ref(false);
+const errorMessage = ref('');
+const toast = useToast();
 
 // App Lists
 const categories = ref<Category[]>([]);
@@ -41,6 +44,7 @@ const prodForm = reactive({ name: '', sku_code: '', category_id: '', safety_thre
 
 const fetchData = async () => {
   isLoading.value = true;
+  errorMessage.value = '';
   try {
     const [catRes, prodRes] = await Promise.all([
       StockService.getCategories(),
@@ -61,18 +65,8 @@ const fetchData = async () => {
       category_id: Number(product.category_id),
       safety_threshold: Number(product.safety_threshold ?? product.minimum_stock ?? 0)
     }));
-  } catch (error) {
-    console.error("Erreur d'initialisation du canevas", error);
-    // Fallback Mock UI data fallback rows for clean offline preview testing
-    categories.value = [
-      { id: 1, name: 'Câblage & Conduits', description: 'Câbles RO2V, gaines ICTA, tubes IRL' },
-      { id: 2, name: 'Appareillage', description: 'Disjoncteurs, interrupteurs, prises' }
-    ];
-    products.value = [
-      { id: 101, name: 'Câble Électrique RO2V 3G1.5', sku_code: 'CAB-3G15', category_id: 1, safety_threshold: 50 },
-      { id: 102, name: 'Tube IRL Diamètre 20', sku_code: 'TUBE-IRL20', category_id: 1, safety_threshold: 100 },
-      { id: 103, name: 'Disjoncteur Schneider 16A', sku_code: 'DISJ-16A', category_id: 2, safety_threshold: 15 }
-    ];
+  } catch {
+    errorMessage.value = "Impossible de charger le catalogue. Vérifiez votre connexion et réessayez.";
   } finally {
     isLoading.value = false;
   }
@@ -94,7 +88,8 @@ const handleCreateCategory = async () => {
     catForm.name = ''; catForm.description = '';
     showCategoryModal.value = false;
     await fetchData();
-  } catch (err) { alert("Erreur lors de la création de la catégorie."); }
+    toast.success('Catégorie créée avec succès.');
+  } catch { toast.error("Erreur lors de la création de la catégorie."); }
 };
 
 // Open Product Modal preset with prefilled Category Id column selection
@@ -116,7 +111,8 @@ const handleCreateProduct = async () => {
     prodForm.name = ''; prodForm.sku_code = '';
     showProductModal.value = false;
     await fetchData();
-  } catch (err) { alert("Erreur lors de la création de l'article."); }
+    toast.success('Article ajouté au catalogue.');
+  } catch { toast.error("Erreur lors de la création de l'article."); }
 };
 
 const handleEditCategory = async (category: Category) => {
@@ -134,8 +130,9 @@ const handleEditCategory = async (category: Category) => {
       code: category.code
     });
     await fetchData();
-  } catch (err) {
-    alert('Erreur lors de la modification de la catégorie.');
+    toast.success('Catégorie modifiée.');
+  } catch {
+    toast.error('Erreur lors de la modification de la catégorie.');
   }
 };
 
@@ -151,8 +148,9 @@ const handleDeleteCategory = async (category: Category) => {
   try {
     await StockService.deleteCategory(category.id);
     await fetchData();
-  } catch (err) {
-    alert('Impossible de supprimer la catégorie (elle contient peut-être des produits).');
+    toast.success('Catégorie supprimée.');
+  } catch {
+    toast.error('Impossible de supprimer la catégorie (elle contient peut-être des produits).');
   }
 };
 
@@ -173,7 +171,7 @@ const handleEditProduct = async (product: Product) => {
   const thresholdNumber = Number(thresholdInput);
 
   if (!thresholdInput || Number.isNaN(thresholdNumber) || thresholdNumber < 0) {
-    alert('Seuil invalide.');
+    toast.error('Seuil invalide.');
     return;
   }
 
@@ -185,8 +183,9 @@ const handleEditProduct = async (product: Product) => {
       safety_threshold: thresholdNumber
     });
     await fetchData();
-  } catch (err) {
-    alert("Erreur lors de la modification de l'article.");
+    toast.success('Article modifié.');
+  } catch {
+    toast.error("Erreur lors de la modification de l'article.");
   }
 };
 
@@ -202,8 +201,9 @@ const handleDeleteProduct = async (product: Product) => {
   try {
     await StockService.deleteProduct(product.id);
     await fetchData();
-  } catch (err) {
-    alert("Erreur lors de la suppression de l'article.");
+    toast.success('Article supprimé.');
+  } catch {
+    toast.error("Erreur lors de la suppression de l'article.");
   }
 };
 
@@ -260,8 +260,25 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex items-center justify-center py-20 w-full">
+      <div class="flex flex-col items-center gap-3">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-red-200 border-t-red-600"></div>
+        <span class="text-sm text-gray-500 font-medium">Chargement du catalogue…</span>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="errorMessage" class="flex items-center justify-center py-20 w-full">
+      <div class="flex flex-col items-center gap-4 text-center max-w-md">
+        <span class="material-symbols-outlined text-4xl text-red-400">error_outline</span>
+        <p class="text-sm text-red-600 font-medium">{{ errorMessage }}</p>
+        <button @click="fetchData" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">Réessayer</button>
+      </div>
+    </div>
+
     <!-- Canvas Scrollable Grid Workspace Board -->
-    <div class="flex space-x-6 overflow-x-auto pb-6 items-start snap-x scroll-smooth select-none">
+    <div v-else class="flex space-x-6 overflow-x-auto pb-6 items-start snap-x scroll-smooth select-none">
       
       <!-- Category Kanban Column Board -->
       <div v-for="board in canvasBoards" :key="board.id" class="w-80 bg-white border border-gray-200 rounded-xl shadow-2xs flex-shrink-0 flex flex-col max-h-[75vh] snap-center">

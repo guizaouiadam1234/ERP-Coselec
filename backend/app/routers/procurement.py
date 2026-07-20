@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.procurement.purchase import PurchaseRequest, PurchaseOrder, PurchaseOrderLine
 from pydantic import BaseModel, ConfigDict
@@ -42,9 +43,13 @@ def create_purchase_request(req: PurchaseRequestCreate, db: Session = Depends(ge
         expected_date=req.expected_date
     )
     db.add(db_req)
-    db.commit()
-    db.refresh(db_req)
-    return db_req
+    try:
+        db.commit()
+        db.refresh(db_req)
+        return db_req
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid project_id or requester_id")
 
 @router.get("/orders", response_model=List[PurchaseOrderResponse])
 def get_purchase_orders(db: Session = Depends(get_db)):
@@ -57,6 +62,10 @@ def create_purchase_order(order: PurchaseOrderCreate, db: Session = Depends(get_
         supplier_id=order.supplier_id
     )
     db.add(db_order)
-    db.commit()
-    db.refresh(db_order)
-    return db_order
+    try:
+        db.commit()
+        db.refresh(db_order)
+        return db_order
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid request_id or supplier_id")

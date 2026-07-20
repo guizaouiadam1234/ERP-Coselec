@@ -219,7 +219,7 @@ onMounted(async () => {
       </div>
 
       <div v-if="canViewProjects">
-        <h2 class = "text-xs uppercase text-red-200 mb-2">Projets</h2>
+        <h2 v-if="!collapsed" class="text-xs uppercase text-red-200 mb-2">Projets</h2>
         <SidebarItem to="/project-dashboard" icon="dashboard" label="Dashboard Projet" :collapsed="collapsed"></SidebarItem>
         <SidebarItem to="/projects" icon="work" label="Projets" :collapsed="collapsed"></SidebarItem>
         <SidebarItem to="/portfolio" icon="pie_chart" label="Portfolio" :collapsed="collapsed"></SidebarItem>
