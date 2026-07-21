@@ -83,6 +83,17 @@ const createExpense = async () => {
   }
 };
 
+const updateExpenseStatus = async (expenseId: number, status: string) => {
+  if (!selectedProjectId.value) return;
+  try {
+    await api.patch(`/projects/${selectedProjectId.value}/budgets/expenses/${expenseId}/status`, { status });
+    toast.success(`Dépense ${status === 'Approved' ? 'approuvée' : 'rejetée'}.`);
+    await fetchBudgetData();
+  } catch {
+    toast.error("Erreur lors de la mise à jour du statut.");
+  }
+};
+
 watch(selectedProjectId, () => {
   fetchBudgetData();
 });
@@ -171,6 +182,7 @@ onMounted(async () => {
                   <th class="px-6 py-4 font-medium">Description</th>
                   <th class="px-6 py-4 font-medium">Montant</th>
                   <th class="px-6 py-4 font-medium">Statut</th>
+                  <th class="px-6 py-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -183,9 +195,15 @@ onMounted(async () => {
                       {{ e.status }}
                     </span>
                   </td>
+                  <td class="px-6 py-4 text-sm">
+                    <div v-if="e.status === 'Pending'" class="flex gap-2">
+                      <button @click="updateExpenseStatus(e.id, 'Approved')" class="text-green-600 hover:text-green-800" title="Approuver"><span class="material-symbols-outlined text-lg">check_circle</span></button>
+                      <button @click="updateExpenseStatus(e.id, 'Rejected')" class="text-red-600 hover:text-red-800" title="Rejeter"><span class="material-symbols-outlined text-lg">cancel</span></button>
+                    </div>
+                  </td>
                 </tr>
                 <tr v-if="expenses.length === 0">
-                  <td colspan="4" class="px-6 py-8 text-center text-gray-500">Aucune dépense enregistrée.</td>
+                  <td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucune dépense enregistrée.</td>
                 </tr>
               </tbody>
             </table>

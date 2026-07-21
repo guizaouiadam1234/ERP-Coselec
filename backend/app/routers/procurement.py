@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.procurement.purchase import PurchaseRequest, PurchaseOrder, PurchaseOrderLine
+from app.services.pdf_generator import generate_purchase_order_pdf
+from app.services.storage import get_file_url_from_minio
 from pydantic import BaseModel, ConfigDict
 from datetime import date
 from typing import List
@@ -20,9 +22,15 @@ class PurchaseRequestResponse(PurchaseRequestCreate):
     status: str
     model_config = ConfigDict(from_attributes=True)
 
+class PurchaseOrderLineCreate(BaseModel):
+    product_id: int
+    quantity: int
+    unit_price: float
+
 class PurchaseOrderCreate(BaseModel):
     purchase_request_id: int | None = None
     supplier_id: int | None = None
+    lines: List[PurchaseOrderLineCreate] = []
 
 class PurchaseOrderResponse(PurchaseOrderCreate):
     id: int
@@ -30,11 +38,11 @@ class PurchaseOrderResponse(PurchaseOrderCreate):
     total_amount: float
     model_config = ConfigDict(from_attributes=True)
 
-@router.get("/requests", response_model=List[PurchaseRequestResponse])
+@router.get("/requests/", response_model=List[PurchaseRequestResponse])
 def get_purchase_requests(db: Session = Depends(get_db)):
     return db.query(PurchaseRequest).all()
 
-@router.post("/requests", response_model=PurchaseRequestResponse)
+@router.post("/requests/", response_model=PurchaseRequestResponse)
 def create_purchase_request(req: PurchaseRequestCreate, db: Session = Depends(get_db)):
     db_req = PurchaseRequest(
         project_id=req.project_id,
@@ -51,21 +59,54 @@ def create_purchase_request(req: PurchaseRequestCreate, db: Session = Depends(ge
         db.rollback()
         raise HTTPException(status_code=400, detail="Invalid project_id or requester_id")
 
-@router.get("/orders", response_model=List[PurchaseOrderResponse])
+@router.get("/orders/", response_model=List[PurchaseOrderResponse])
 def get_purchase_orders(db: Session = Depends(get_db)):
     return db.query(PurchaseOrder).all()
 
-@router.post("/orders", response_model=PurchaseOrderResponse)
+@router.post("/orders/", response_model=PurchaseOrderResponse)
 def create_purchase_order(order: PurchaseOrderCreate, db: Session = Depends(get_db)):
     db_order = PurchaseOrder(
         purchase_request_id=order.purchase_request_id,
-        supplier_id=order.supplier_id
+        supplier_id=order.supplier_id,
+        total_amount=0.0
     )
     db.add(db_order)
+    
     try:
+        db.flush() # Flush to get db_order.id
+        
+        total = 0.0
+        for line in order.lines:
+            db_line = PurchaseOrderLine(
+                purchase_order_id=db_order.id,
+                product_id=line.product_id,
+                quantity=line.quantity,
+                unit_price=line.unit_price
+            )
+            db.add(db_line)
+            total += (line.quantity * line.unit_price)
+            
+        db_order.total_amount = total
         db.commit()
         db.refresh(db_order)
         return db_order
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Invalid request_id or supplier_id")
+        raise HTTPException(status_code=400, detail="Invalid request_id, supplier_id or product_id")
+
+@router.get("/orders/{order_id}/download-pdf/")
+def download_order_pdf(order_id: int, db: Session = Depends(get_db)):
+    db_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    if not db_order.pdf_url:
+        pdf_path = generate_purchase_order_pdf(db_order)
+        if pdf_path:
+            db_order.pdf_url = pdf_path
+            db.commit()
+        else:
+            raise HTTPException(status_code=500, detail="Failed to generate PDF")
+            
+    url = get_file_url_from_minio(db_order.pdf_url)
+    return {"pdf_url": url}

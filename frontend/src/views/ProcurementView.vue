@@ -12,6 +12,7 @@ const purchaseRequests = ref<any[]>([]);
 const purchaseOrders = ref<any[]>([]);
 const projects = ref<any[]>([]);
 const partners = ref<any[]>([]);
+const products = ref<any[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -27,24 +28,35 @@ const requestForm = ref({
 
 const orderForm = ref({
   purchase_request_id: '',
-  supplier_id: ''
+  supplier_id: '',
+  lines: [] as Array<{ product_id: string, quantity: number, unit_price: number }>
 });
+
+const addLine = () => {
+  orderForm.value.lines.push({ product_id: '', quantity: 1, unit_price: 0 });
+};
+
+const removeLine = (index: number) => {
+  orderForm.value.lines.splice(index, 1);
+};
 
 const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [requestsRes, ordersRes, projRes, partRes] = await Promise.all([
+    const [requestsRes, ordersRes, projRes, partRes, prodRes] = await Promise.all([
       api.get('/procurement/requests'),
       api.get('/procurement/orders'),
       api.get('/projects/'),
-      StockService.getPartners()
+      StockService.getPartners(),
+      StockService.getProducts()
     ]);
     
     purchaseRequests.value = requestsRes.data;
     purchaseOrders.value = ordersRes.data;
     projects.value = projRes.data;
     partners.value = partRes.data;
+    products.value = prodRes.data;
   } catch (err: any) {
     console.error("Failed to fetch procurement data", err);
     error.value = "Erreur lors du chargement des données d'achat.";
@@ -83,14 +95,19 @@ const createPurchaseRequest = async () => {
 const createPurchaseOrder = async () => {
   isSubmitting.value = true;
   try {
-    await api.post('/procurement/orders', {
+    await api.post('/procurement/orders/', {
       purchase_request_id: orderForm.value.purchase_request_id ? Number(orderForm.value.purchase_request_id) : null,
-      supplier_id: orderForm.value.supplier_id ? Number(orderForm.value.supplier_id) : null
+      supplier_id: orderForm.value.supplier_id ? Number(orderForm.value.supplier_id) : null,
+      lines: orderForm.value.lines.map(line => ({
+        product_id: Number(line.product_id),
+        quantity: Number(line.quantity),
+        unit_price: Number(line.unit_price)
+      }))
     });
     
     toast.success("Bon de commande créé avec succès !");
     showOrderModal.value = false;
-    orderForm.value = { purchase_request_id: '', supplier_id: '' };
+    orderForm.value = { purchase_request_id: '', supplier_id: '', lines: [] };
     await fetchData();
   } catch (err: any) {
     toast.error("Erreur lors de la création du bon de commande.");
@@ -102,6 +119,18 @@ const createPurchaseOrder = async () => {
 onMounted(() => {
   fetchData();
 });
+
+const downloadOrderPdf = async (orderId: number) => {
+  try {
+    toast.success("Génération du PDF en cours...");
+    const res = await api.get(`/procurement/orders/${orderId}/download-pdf`);
+    if (res.data && res.data.pdf_url) {
+      window.open(res.data.pdf_url, '_blank');
+    }
+  } catch (err: any) {
+    toast.error("Erreur lors de la génération du PDF du Bon de Commande.");
+  }
+};
 </script>
 
 <template>
@@ -180,6 +209,7 @@ onMounted(() => {
                   <th class="px-6 py-4 font-medium">Demande Liée</th>
                   <th class="px-6 py-4 font-medium">Montant Total</th>
                   <th class="px-6 py-4 font-medium">Statut</th>
+                  <th class="px-6 py-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
@@ -192,9 +222,15 @@ onMounted(() => {
                       {{ order.status }}
                     </span>
                   </td>
+                  <td class="px-6 py-4">
+                    <button @click="downloadOrderPdf(order.id)" class="text-indigo-600 hover:text-indigo-900 font-medium flex items-center gap-1">
+                      <span class="material-symbols-outlined text-sm">download</span>
+                      PDF
+                    </button>
+                  </td>
                 </tr>
                 <tr v-if="purchaseOrders.length === 0">
-                  <td colspan="4" class="px-6 py-8 text-center text-gray-500">Aucun bon de commande.</td>
+                  <td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucun bon de commande.</td>
                 </tr>
               </tbody>
             </table>
@@ -261,6 +297,36 @@ onMounted(() => {
               <option value="">Sélectionner un fournisseur</option>
               <option v-for="part in partners" :key="part.id" :value="part.id">{{ part.name }}</option>
             </select>
+          </div>
+
+          <div class="border-t border-gray-200 pt-4 mt-4">
+            <div class="flex justify-between items-center mb-2">
+              <label class="block text-sm font-medium text-gray-700">Lignes de Commande</label>
+              <button type="button" @click="addLine" class="text-xs text-red-600 hover:text-red-800 font-medium">+ Ajouter une Ligne</button>
+            </div>
+            
+            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+              <div v-for="(line, idx) in orderForm.lines" :key="idx" class="flex gap-2 items-start bg-gray-50 p-2 rounded-lg border border-gray-100">
+                <div class="flex-1">
+                  <select v-model="line.product_id" required class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-red-500">
+                    <option value="">Produit</option>
+                    <option v-for="prod in products" :key="prod.id" :value="prod.id">{{ prod.designation }}</option>
+                  </select>
+                </div>
+                <div class="w-20">
+                  <input type="number" v-model="line.quantity" min="1" required placeholder="Qté" class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-red-500" />
+                </div>
+                <div class="w-24">
+                  <input type="number" v-model="line.unit_price" min="0" step="0.01" required placeholder="Prix U." class="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-red-500" />
+                </div>
+                <button type="button" @click="removeLine(idx)" class="text-gray-400 hover:text-red-500 mt-1">
+                  <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+              <div v-if="orderForm.lines.length === 0" class="text-xs text-gray-500 text-center py-4 italic">
+                Aucun article ajouté.
+              </div>
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 mt-6">

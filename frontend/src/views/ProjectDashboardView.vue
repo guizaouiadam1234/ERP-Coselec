@@ -12,8 +12,10 @@ import {
   LinearScale
 } from 'chart.js'
 import { Bar } from 'vue-chartjs'
+import { useToast } from '@/composables/useToast'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+const toast = useToast()
 
 const projects = ref<any[]>([]);
 const selectedProjectId = ref<number | null>(null);
@@ -87,6 +89,19 @@ watch(selectedProjectId, () => {
 onMounted(() => {
   fetchProjects();
 });
+
+const downloadProjectReport = async () => {
+  if (!selectedProjectId.value) return;
+  try {
+    toast.success("Génération du rapport en cours...");
+    const res = await api.get(`/projects/${selectedProjectId.value}/download-report`);
+    if (res.data && res.data.pdf_url) {
+      window.open(res.data.pdf_url, '_blank');
+    }
+  } catch (err: any) {
+    toast.error("Erreur lors de la génération du rapport.");
+  }
+};
 </script>
 
 <template>
@@ -98,12 +113,12 @@ onMounted(() => {
           <p class="mt-1 text-gray-500">Suivi des KPIs, Budget et Avancement du Projet</p>
         </div>
         <div class="flex gap-4 items-center">
-          <select v-model="selectedProjectId" class="px-4 py-2 rounded-lg border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#d10f2f]">
-            <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.code }} - {{ p.nom }}</option>
+          <select v-model="selectedProjectId" class="border border-gray-300 rounded-lg px-4 py-2 bg-white min-w-[250px] shadow-sm">
+            <option v-for="p in projects" :key="p.id" :value="p.id">[{{ p.code }}] {{ p.nom }}</option>
           </select>
-          <button disabled class="bg-gray-300 text-gray-500 px-4 py-2 rounded-lg flex items-center gap-2 cursor-not-allowed" title="Bientôt disponible">
-            <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
-            Générer Rapport
+          <button @click="downloadProjectReport" :disabled="!selectedProjectId" class="bg-[#d10f2f] hover:bg-[#97091f] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">download</span>
+            Exporter Rapport
           </button>
         </div>
       </div>

@@ -40,6 +40,7 @@ class PurchaseOrder(Base):
     
     status = Column(SQLEnum(PurchaseOrderStatus), default=PurchaseOrderStatus.DRAFT)
     total_amount = Column(Float(12, 2), default=0.0)
+    pdf_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     purchase_request = relationship("PurchaseRequest", back_populates="orders")

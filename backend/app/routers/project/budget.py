@@ -38,6 +38,9 @@ class ExpenseResponse(ExpenseCreate):
     proof_document_url: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
+class ExpenseUpdate(BaseModel):
+    status: str
+
 @router.get("/", response_model=List[BudgetResponse])
 def get_budgets(project_id: int, db: Session = Depends(get_db)):
     return db.query(ProjectBudget).options(joinedload(ProjectBudget.expenses)).filter(ProjectBudget.project_id == project_id).all()
@@ -74,6 +77,17 @@ def add_expense(project_id: int, expense: ExpenseCreate, db: Session = Depends(g
         description=expense.description
     )
     db.add(db_expense)
+    db.commit()
+    db.refresh(db_expense)
+    return db_expense
+
+@router.patch("/expenses/{expense_id}/status", response_model=ExpenseResponse)
+def update_expense_status(project_id: int, expense_id: int, update_data: ExpenseUpdate, db: Session = Depends(get_db)):
+    db_expense = db.query(ProjectExpense).filter(ProjectExpense.id == expense_id, ProjectExpense.project_id == project_id).first()
+    if not db_expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    db_expense.status = update_data.status
     db.commit()
     db.refresh(db_expense)
     return db_expense

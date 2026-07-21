@@ -6,6 +6,8 @@ from app.models.project.project import Project, ProjectStatus
 from app.models.stock.partner import Partner
 from app.schemas.project.project import ProjectCreate, ProjectResponse, ProjectUpdate
 from app.core.security.auth import check_permission
+from app.services.pdf_generator import generate_project_report_pdf
+from app.services.storage import get_file_url_from_minio
 from typing import List
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -34,6 +36,19 @@ def create_project(project_data : ProjectCreate, db: Session= Depends(get_db), u
 
     db.refresh(db_project)
     return db_project
+
+@router.get("/{project_id}/download-report/")
+def download_project_report(project_id: int, db: Session = Depends(get_db)):
+    db_project = db.query(Project).filter(Project.id == project_id).first()
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+        
+    pdf_path = generate_project_report_pdf(db_project)
+    if not pdf_path:
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
+            
+    url = get_file_url_from_minio(pdf_path)
+    return {"pdf_url": url}
 
 @router.post("/{project_id}/partners/{partner_id}", status_code=status.HTTP_201_CREATED)
 def add_partner_to_project(
