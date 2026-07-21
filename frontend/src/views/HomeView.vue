@@ -131,10 +131,6 @@ onMounted(async () => {
           <h1 class="text-3xl font-bold text-gray-900">Tableau de bord</h1>
           <p class="mt-1 text-gray-500">Aperçu général des activités COSELEC</p>
         </div>
-        <button disabled class="bg-gray-300 text-gray-500 px-4 py-2 rounded-lg flex items-center gap-2 cursor-not-allowed" title="Bientôt disponible">
-          <span class="material-symbols-outlined text-sm">download</span>
-          Rapport
-        </button>
       </div>
 
       <!-- KPI Cards -->
