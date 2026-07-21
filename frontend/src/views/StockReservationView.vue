@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import AppLayout from "@/layouts/AppLayout.vue";
 import api from "@/services/api";
 import { StockService } from '@/services/stock';
@@ -18,6 +18,12 @@ const error = ref<string | null>(null);
 const showModal = ref(false);
 const isSubmitting = ref(false);
 
+const searchQuery = ref('');
+let debounceTimer: any = null;
+
+const sortColumn = ref('id');
+const sortOrder = ref<'asc' | 'desc'>('desc');
+
 const form = ref({
   project_id: '',
   product_id: '',
@@ -28,8 +34,9 @@ const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
+    const searchParam = searchQuery.value ? `?search=${encodeURIComponent(searchQuery.value)}` : '';
     const [resData, projData, prodData] = await Promise.all([
-      api.get('/stock-reservations/'),
+      api.get(`/stock-reservations/${searchParam}`),
       api.get('/projects/'),
       StockService.getProducts()
     ]);
@@ -44,6 +51,39 @@ const fetchData = async () => {
   }
 };
 
+const debouncedSearch = () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    fetchData();
+  }, 300);
+};
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedReservations = computed(() => {
+  return [...reservations.value].sort((a, b) => {
+    let valA = a[sortColumn.value];
+    let valB = b[sortColumn.value];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
+
 const createReservation = async () => {
   if (!form.value.project_id || !form.value.product_id || form.value.quantity < 1) {
     toast.error("Veuillez remplir tous les champs correctement.");
@@ -52,7 +92,6 @@ const createReservation = async () => {
 
   isSubmitting.value = true;
   try {
-    // The profile ID is a User ID, not an Employee ID. To avoid FK violations, we send null for now.
     await api.post('/stock-reservations/', {
       project_id: Number(form.value.project_id),
       product_id: Number(form.value.product_id),
@@ -105,38 +144,69 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="loading" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d10f2f]"></div>
-      </div>
-
-      <div v-else-if="error" class="bg-red-50 text-red-600 p-4 rounded-lg">
-        {{ error }}
-      </div>
-
-      <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="p-6 border-b border-gray-100">
-          <h2 class="text-xl font-bold text-gray-900">Liste des Réservations</h2>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+          <h2 class="text-xl font-bold text-gray-900">
+            Liste des Réservations
+          </h2>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
+            <input 
+              v-model="searchQuery" 
+              @input="debouncedSearch"
+              class="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-shadow w-64" 
+              placeholder="Rechercher réservation..."
+            >
+          </div>
         </div>
-        <div class="overflow-x-auto">
+
+        <div v-if="loading && !reservations.length" class="flex justify-center items-center py-12">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d10f2f]"></div>
+        </div>
+
+        <div v-else-if="error" class="bg-red-50 text-red-600 p-4 m-4 rounded-lg">
+          {{ error }}
+        </div>
+
+        <div v-else class="overflow-x-auto relative min-h-[200px]">
+          <div v-if="loading" class="absolute inset-0 bg-white/50 flex justify-center items-center z-10 backdrop-blur-[1px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d10f2f]"></div>
+          </div>
           <table class="w-full text-left">
             <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
               <tr>
-                <th class="px-6 py-4 font-medium">ID Réservation</th>
-                <th class="px-6 py-4 font-medium">Projet</th>
-                <th class="px-6 py-4 font-medium">Produit</th>
-                <th class="px-6 py-4 font-medium">Quantité</th>
-                <th class="px-6 py-4 font-medium">Date</th>
-                <th class="px-6 py-4 font-medium">Statut</th>
+                <th @click="sortBy('id')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">ID Réservation <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'id'}">{{ sortColumn === 'id' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
+                <th @click="sortBy('project_id')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">Projet <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'project_id'}">{{ sortColumn === 'project_id' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
+                <th @click="sortBy('product_name')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">Produit <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'product_name'}">{{ sortColumn === 'product_name' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
+                <th @click="sortBy('quantity')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">Quantité <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'quantity'}">{{ sortColumn === 'quantity' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
+                <th @click="sortBy('created_at')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">Date <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'created_at'}">{{ sortColumn === 'created_at' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
+                <th @click="sortBy('created_at')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">Année <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'created_at'}">{{ sortColumn === 'created_at' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
+                <th @click="sortBy('status')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                  <div class="flex items-center gap-1">Statut <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'status'}">{{ sortColumn === 'status' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                </th>
                 <th class="px-6 py-4 font-medium">Action</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="res in reservations" :key="res.id" class="hover:bg-gray-50 transition-colors">
+              <tr v-for="res in sortedReservations" :key="res.id" class="hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-4 text-sm font-bold text-gray-900">RES-{{ res.id }}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">#{{ res.project_id }}</td>
                 <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ res.product_name || `Produit #${res.product_id}` }}</td>
                 <td class="px-6 py-4 text-sm font-bold text-gray-900">{{ res.quantity }}</td>
-                <td class="px-6 py-4 text-sm text-gray-500">{{ new Date(res.created_at).toLocaleDateString() }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ new Date(res.created_at).toLocaleDateString('fr-FR', { month: '2-digit', day: '2-digit' }) }}</td>
+                <td class="px-6 py-4 text-sm font-bold text-gray-700">{{ new Date(res.created_at).getFullYear() }}</td>
                 <td class="px-6 py-4">
                   <span :class="{'bg-green-100 text-green-800': res.status === 'Approved' || res.status === 'Consumed', 'bg-yellow-100 text-yellow-800': res.status === 'Pending'}" class="px-2 py-1 text-xs font-semibold rounded-full">
                     {{ res.status }}
@@ -153,8 +223,8 @@ onMounted(() => {
                   <span v-else class="text-gray-400">Consommée</span>
                 </td>
               </tr>
-              <tr v-if="reservations.length === 0">
-                <td colspan="7" class="px-6 py-8 text-center text-gray-500">Aucune réservation de stock.</td>
+              <tr v-if="sortedReservations.length === 0">
+                <td colspan="8" class="px-6 py-8 text-center text-gray-500">Aucune réservation de stock trouvée.</td>
               </tr>
             </tbody>
           </table>

@@ -4,9 +4,11 @@ from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.stock.reservation import ProjectStockReservation, ReservationStatus
 from app.models.stock.stock import Stock
+from app.models.stock.product import Product
 from pydantic import BaseModel, ConfigDict, computed_field
 from datetime import datetime
-from typing import List
+from typing import List, Optional
+from sqlalchemy import or_, cast, String
 
 router = APIRouter(prefix="/stock-reservations", tags=["Stock Reservations"])
 
@@ -29,8 +31,20 @@ class ReservationResponse(ReservationCreate):
     model_config = ConfigDict(from_attributes=True)
 
 @router.get("/", response_model=List[ReservationResponse])
-def get_reservations(db: Session = Depends(get_db)):
-    return db.query(ProjectStockReservation).options(joinedload(ProjectStockReservation.product)).all()
+def get_reservations(search: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(ProjectStockReservation).join(Product, ProjectStockReservation.product_id == Product.id).options(joinedload(ProjectStockReservation.product))
+    if search:
+        search_term = search.replace("RES-", "")
+        query = query.filter(
+            or_(
+                cast(ProjectStockReservation.id, String).ilike(f"%{search_term}%"),
+                cast(ProjectStockReservation.project_id, String).ilike(f"%{search}%"),
+                cast(ProjectStockReservation.created_at, String).ilike(f"%{search}%"),
+                Product.code.ilike(f"%{search}%"),
+                Product.designation.ilike(f"%{search}%")
+            )
+        )
+    return query.all()
 
 @router.post("/", response_model=ReservationResponse)
 def create_reservation(res: ReservationCreate, db: Session = Depends(get_db)):

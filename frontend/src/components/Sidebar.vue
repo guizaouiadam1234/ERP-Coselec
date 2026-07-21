@@ -11,9 +11,15 @@ import {
 
 const collapsed = ref(false);
 const profile = ref<CurrentUserProfile | null>(getStoredProfile());
+const sidebarRef = ref<HTMLElement | null>(null);
 
 const toggleSidebar = () => {
   collapsed.value = !collapsed.value;
+};
+
+const handleScroll = (e: Event) => {
+  const target = e.target as HTMLElement;
+  sessionStorage.setItem("sidebarScrollPos", target.scrollTop.toString());
 };
 
 const roles = computed(() => profile.value?.roles || []);
@@ -44,6 +50,12 @@ const canViewFuelRequests = computed(() => {
 });
 
 onMounted(async () => {
+  if (sidebarRef.value) {
+    const savedPos = sessionStorage.getItem("sidebarScrollPos");
+    if (savedPos) {
+      sidebarRef.value.scrollTop = parseInt(savedPos, 10);
+    }
+  }
   try {
     profile.value = await refreshCurrentUserProfile();
   } catch {
@@ -54,6 +66,8 @@ onMounted(async () => {
 
 <template>
   <aside
+    ref="sidebarRef"
+    @scroll="handleScroll"
     :class="[
       collapsed ? 'w-20' : 'w-72',
       'sidebar h-screen overflow-y-auto bg-gradient-to-b from-[#d10f2f] to-[#97091f] text-white flex-shrink-0 transition-all duration-300'

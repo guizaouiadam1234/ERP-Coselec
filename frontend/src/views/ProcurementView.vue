@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import AppLayout from "@/layouts/AppLayout.vue";
 import api from "@/services/api";
 import { StockService } from "@/services/stock";
@@ -19,6 +19,12 @@ const error = ref<string | null>(null);
 const showRequestModal = ref(false);
 const showOrderModal = ref(false);
 const isSubmitting = ref(false);
+
+const searchQuery = ref('');
+let debounceTimer: any = null;
+
+const sortColumn = ref('id');
+const sortOrder = ref<'asc' | 'desc'>('desc');
 
 const requestForm = ref({
   project_id: '',
@@ -44,9 +50,10 @@ const fetchData = async () => {
   loading.value = true;
   error.value = null;
   try {
+    const searchParam = searchQuery.value ? `?search=${encodeURIComponent(searchQuery.value)}` : '';
     const [requestsRes, ordersRes, projRes, partRes, prodRes] = await Promise.all([
-      api.get('/procurement/requests'),
-      api.get('/procurement/orders'),
+      api.get('/procurement/requests/'),
+      api.get(`/procurement/orders/${searchParam}`),
       api.get('/projects/'),
       StockService.getPartners(),
       StockService.getProducts()
@@ -65,6 +72,39 @@ const fetchData = async () => {
   }
 };
 
+const debouncedSearch = () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    fetchData();
+  }, 300);
+};
+
+const sortBy = (column: string) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const sortedOrders = computed(() => {
+  return [...purchaseOrders.value].sort((a, b) => {
+    let valA = a[sortColumn.value];
+    let valB = b[sortColumn.value];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
+
 const createPurchaseRequest = async () => {
   if (!requestForm.value.project_id) {
     toast.error("Veuillez sélectionner un projet.");
@@ -73,8 +113,7 @@ const createPurchaseRequest = async () => {
 
   isSubmitting.value = true;
   try {
-    // The profile ID is a User ID, not an Employee ID. To avoid FK violations, we send null for now.
-    await api.post('/procurement/requests', {
+    await api.post('/procurement/requests/', {
       project_id: Number(requestForm.value.project_id),
       description: requestForm.value.description || undefined,
       expected_date: requestForm.value.expected_date || undefined,
@@ -123,7 +162,7 @@ onMounted(() => {
 const downloadOrderPdf = async (orderId: number) => {
   try {
     toast.success("Génération du PDF en cours...");
-    const res = await api.get(`/procurement/orders/${orderId}/download-pdf`);
+    const res = await api.get(`/procurement/orders/${orderId}/download-pdf/`);
     if (res.data && res.data.pdf_url) {
       window.open(res.data.pdf_url, '_blank');
     }
@@ -153,9 +192,11 @@ const downloadOrderPdf = async (orderId: number) => {
         </div>
       </div>
 
-      <div v-if="loading" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d10f2f]"></div>
-      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-[300px] relative">
+        <div v-if="loading && (!purchaseOrders.length && !purchaseRequests.length)" class="absolute inset-0 bg-white/80 z-20 flex justify-center items-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d10f2f]"></div>
+        </div>
+
 
       <div v-else-if="error" class="bg-red-50 text-red-600 p-4 rounded-lg">
         {{ error }}
@@ -174,6 +215,7 @@ const downloadOrderPdf = async (orderId: number) => {
                   <th class="px-6 py-4 font-medium">Projet</th>
                   <th class="px-6 py-4 font-medium">Description</th>
                   <th class="px-6 py-4 font-medium">Date Prévue</th>
+                  <th class="px-6 py-4 font-medium">Année</th>
                   <th class="px-6 py-4 font-medium">Statut</th>
                 </tr>
               </thead>
@@ -181,7 +223,8 @@ const downloadOrderPdf = async (orderId: number) => {
                 <tr v-for="req in purchaseRequests" :key="req.id" class="hover:bg-gray-50 transition-colors">
                   <td class="px-6 py-4 text-sm font-medium text-gray-900">#{{ req.project_id }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">{{ req.description || '-' }}</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">{{ req.expected_date || '-' }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">{{ req.expected_date ? new Date(req.expected_date).toLocaleDateString('fr-FR', { month: '2-digit', day: '2-digit' }) : '-' }}</td>
+                  <td class="px-6 py-4 text-sm font-bold text-gray-700">{{ req.expected_date ? new Date(req.expected_date).getFullYear() : '-' }}</td>
                   <td class="px-6 py-4">
                     <span :class="{'bg-green-100 text-green-800': req.status === 'Approved', 'bg-yellow-100 text-yellow-800': req.status === 'Pending'}" class="px-2 py-1 text-xs font-semibold rounded-full">
                       {{ req.status }}
@@ -197,26 +240,54 @@ const downloadOrderPdf = async (orderId: number) => {
         </div>
 
         <!-- Purchase Orders -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div class="p-6 border-b border-gray-100">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div class="p-4 border-b border-gray-100 flex justify-between items-center">
             <h2 class="text-xl font-bold text-gray-900">Bons de Commande</h2>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
+              <input 
+                v-model="searchQuery" 
+                @input="debouncedSearch"
+                class="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-shadow w-48" 
+                placeholder="Rechercher BC..."
+              >
+            </div>
           </div>
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto flex-1 relative min-h-[200px]">
+            <div v-if="loading" class="absolute inset-0 bg-white/50 flex justify-center items-center z-10 backdrop-blur-[1px]">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d10f2f]"></div>
+            </div>
             <table class="w-full text-left">
               <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                 <tr>
-                  <th class="px-6 py-4 font-medium">ID BC</th>
-                  <th class="px-6 py-4 font-medium">Demande Liée</th>
-                  <th class="px-6 py-4 font-medium">Montant Total</th>
-                  <th class="px-6 py-4 font-medium">Statut</th>
+                  <th @click="sortBy('id')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div class="flex items-center gap-1">ID BC <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'id'}">{{ sortColumn === 'id' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                  </th>
+                  <th @click="sortBy('purchase_request_id')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div class="flex items-center gap-1">Demande <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'purchase_request_id'}">{{ sortColumn === 'purchase_request_id' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                  </th>
+                  <th @click="sortBy('total_amount')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div class="flex items-center gap-1">Montant <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'total_amount'}">{{ sortColumn === 'total_amount' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                  </th>
+                  <th @click="sortBy('created_at')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div class="flex items-center gap-1">Date <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'created_at'}">{{ sortColumn === 'created_at' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                  </th>
+                  <th @click="sortBy('created_at')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div class="flex items-center gap-1">Année <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'created_at'}">{{ sortColumn === 'created_at' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                  </th>
+                  <th @click="sortBy('status')" class="px-6 py-4 font-medium cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div class="flex items-center gap-1">Statut <span class="material-symbols-outlined text-[16px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100 text-red-500': sortColumn === 'status'}">{{ sortColumn === 'status' && sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward' }}</span></div>
+                  </th>
                   <th class="px-6 py-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="order in purchaseOrders" :key="order.id" class="hover:bg-gray-50 transition-colors">
+                <tr v-for="order in sortedOrders" :key="order.id" class="hover:bg-gray-50 transition-colors">
                   <td class="px-6 py-4 text-sm font-bold text-gray-900">BC-{{ order.id }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">DA-{{ order.purchase_request_id || '-' }}</td>
                   <td class="px-6 py-4 text-sm font-bold text-gray-900">{{ order.total_amount }} XOF</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">{{ new Date(order.created_at).toLocaleDateString('fr-FR', { month: '2-digit', day: '2-digit' }) }}</td>
+                  <td class="px-6 py-4 text-sm font-bold text-gray-700">{{ new Date(order.created_at).getFullYear() }}</td>
                   <td class="px-6 py-4">
                     <span :class="{'bg-blue-100 text-blue-800': order.status === 'Issued', 'bg-gray-100 text-gray-800': order.status === 'Draft'}" class="px-2 py-1 text-xs font-semibold rounded-full">
                       {{ order.status }}
@@ -229,13 +300,14 @@ const downloadOrderPdf = async (orderId: number) => {
                     </button>
                   </td>
                 </tr>
-                <tr v-if="purchaseOrders.length === 0">
-                  <td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucun bon de commande.</td>
+                <tr v-if="sortedOrders.length === 0">
+                  <td colspan="7" class="px-6 py-8 text-center text-gray-500">Aucun bon de commande.</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+      </div>
       </div>
       
     </div>

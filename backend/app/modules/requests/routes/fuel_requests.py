@@ -2,10 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
+from typing import Optional
+from sqlalchemy import or_, cast, String
 
 from app.core.database.session import get_db
 from app.core.security.auth import get_current_user, check_permission
 from app.modules.users.models.user import User
+from app.modules.users.models.employee import Employee
 from app.modules.requests.models.fuel_request import FuelRequest, FuelRequestStatus
 from app.modules.requests.schemas.fuel_request import FuelRequestCreate, FuelRequestAction, FuelRequestResponse
 from app.services.pdf_generator import generate_dmcar_pdf
@@ -15,10 +18,24 @@ router = APIRouter(prefix="/fuel-requests", tags=["Fuel Requests"])
 
 @router.get("/", response_model=list[FuelRequestResponse])
 def list_fuel_requests(
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(check_permission("fuel_requests.read"))
 ):
-    requests = db.query(FuelRequest).filter(FuelRequest.is_deleted == False).all()
+    query = db.query(FuelRequest).outerjoin(Employee, FuelRequest.employee_id == Employee.id).filter(FuelRequest.is_deleted == False)
+    if search:
+        search_term = search.replace("DA-", "")
+        query = query.filter(
+            or_(
+                cast(FuelRequest.id, String).ilike(f"%{search_term}%"),
+                cast(FuelRequest.affaire_no, String).ilike(f"%{search}%"),
+                cast(FuelRequest.dossier_no, String).ilike(f"%{search}%"),
+                cast(FuelRequest.request_date, String).ilike(f"%{search}%"),
+                Employee.first_name.ilike(f"%{search}%"),
+                Employee.last_name.ilike(f"%{search}%")
+            )
+        )
+    requests = query.all()
     # Inject employee_name if available
     for r in requests:
         if r.employee:

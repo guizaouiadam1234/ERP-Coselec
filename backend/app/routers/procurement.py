@@ -6,8 +6,9 @@ from app.models.procurement.purchase import PurchaseRequest, PurchaseOrder, Purc
 from app.services.pdf_generator import generate_purchase_order_pdf
 from app.services.storage import get_file_url_from_minio
 from pydantic import BaseModel, ConfigDict
-from datetime import date
-from typing import List
+from datetime import date, datetime
+from typing import List, Optional
+from sqlalchemy import or_, cast, String
 
 router = APIRouter(prefix="/procurement", tags=["Procurement"])
 
@@ -36,6 +37,7 @@ class PurchaseOrderResponse(PurchaseOrderCreate):
     id: int
     status: str
     total_amount: float
+    created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 @router.get("/requests/", response_model=List[PurchaseRequestResponse])
@@ -60,8 +62,19 @@ def create_purchase_request(req: PurchaseRequestCreate, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Invalid project_id or requester_id")
 
 @router.get("/orders/", response_model=List[PurchaseOrderResponse])
-def get_purchase_orders(db: Session = Depends(get_db)):
-    return db.query(PurchaseOrder).all()
+def get_purchase_orders(search: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(PurchaseOrder)
+    if search:
+        search_term_bc = search.replace("BC-", "")
+        search_term_da = search.replace("DA-", "")
+        query = query.filter(
+            or_(
+                cast(PurchaseOrder.id, String).ilike(f"%{search_term_bc}%"),
+                cast(PurchaseOrder.purchase_request_id, String).ilike(f"%{search_term_da}%"),
+                cast(PurchaseOrder.created_at, String).ilike(f"%{search}%")
+            )
+        )
+    return query.all()
 
 @router.post("/orders/", response_model=PurchaseOrderResponse)
 def create_purchase_order(order: PurchaseOrderCreate, db: Session = Depends(get_db)):

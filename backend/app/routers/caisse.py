@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
+from datetime import datetime
+from sqlalchemy import or_, cast, String
 from app.services.pdf_generator import generate_caisse_pdf
 from app.services.storage import get_file_url_from_minio
 from app.models.caisse_voucher import CaisseVoucher
@@ -23,6 +25,34 @@ class CaisseRequest(BaseModel):
     cia: Optional[str] = ""
     depenses: List[CaisseRow] = []
     recettes: List[CaisseRow] = []
+
+class CaisseVoucherResponse(BaseModel):
+    id: int
+    num: Optional[str]
+    affaire: Optional[str]
+    cia: Optional[str]
+    depenses: List[CaisseRow]
+    recettes: List[CaisseRow]
+    pdf_url: Optional[str]
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+@router.get("/", response_model=List[CaisseVoucherResponse])
+def get_caisse_vouchers(search: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(CaisseVoucher)
+    if search:
+        search_term = search.replace("PC-", "")
+        query = query.filter(
+            or_(
+                cast(CaisseVoucher.id, String).ilike(f"%{search_term}%"),
+                cast(CaisseVoucher.num, String).ilike(f"%{search}%"),
+                cast(CaisseVoucher.affaire, String).ilike(f"%{search}%"),
+                cast(CaisseVoucher.cia, String).ilike(f"%{search}%"),
+                cast(CaisseVoucher.created_at, String).ilike(f"%{search}%")
+            )
+        )
+    return query.order_by(CaisseVoucher.id.desc()).all()
 
 @router.post("/generate")
 def generate_caisse(payload: CaisseRequest, db: Session = Depends(get_db)):
