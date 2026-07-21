@@ -37,20 +37,10 @@ const canViewAdmin = computed(() => {
   return hasAnyRole(roles.value, ["Admin"]);
 });
 
-const canViewItRequests = computed(() => {
-  return hasAnyRole(roles.value, ["Admin", "IT"]);
-});
 
-const canViewFacilityRequests = computed(() => {
-  return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction", "Finance"]);
-});
 
 const canViewFuelRequests = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "Facility", "Logistique", "Direction", "Finance"]);
-});
-
-const canViewHrRequests = computed(() => {
-  return hasAnyRole(roles.value, ["Admin", "RH", "Direction"]);
 });
 
 onMounted(async () => {
@@ -140,18 +130,10 @@ onMounted(async () => {
         />
 
         <SidebarItem
-          v-if="canViewItRequests"
-          to="/it-requests"
-          icon="memory"
-          label="Tickets IT"
-          :collapsed="collapsed"
-        />
-
-        <SidebarItem
-          v-if="canViewFacilityRequests"
-          to="/facility-requests"
-          icon="home_repair_service"
-          label="Tickets Logistique"
+          v-if="canViewHr"
+          to="/admin/requests"
+          icon="approval"
+          label="Validation Demandes"
           :collapsed="collapsed"
         />
 
@@ -160,14 +142,6 @@ onMounted(async () => {
           to="/fuel-requests"
           icon="local_gas_station"
           label="Demandes Carburant"
-          :collapsed="collapsed"
-        />
-
-        <SidebarItem
-          v-if="canViewHrRequests"
-          to="/hr-requests"
-          icon="groups"
-          label="Demandes RH"
           :collapsed="collapsed"
         />
       </div>

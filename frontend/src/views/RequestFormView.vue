@@ -18,7 +18,7 @@
           <div class="grid gap-8 px-6 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-10">
             <form class="space-y-5" @submit.prevent="submitRequest">
               <div>
-                <label class="mb-2 block text-sm font-semibold text-gray-700">Sujet</label>
+                <label class="mb-2 block text-sm font-semibold text-gray-700">Sujet / Raison</label>
                 <input
                   v-model="form.subject"
                   type="text"
@@ -26,6 +26,37 @@
                   :placeholder="sectionMeta.subjectPlaceholder"
                   required
                 />
+              </div>
+
+              <div v-if="props.section === 'hr'" class="mb-4">
+                <label class="mb-2 block text-sm font-semibold text-gray-700">Collaborateur concerné</label>
+                <select v-model="form.employee_id" required class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100">
+                  <option value="" disabled>Sélectionner un collaborateur</option>
+                  <option v-for="emp in employees" :key="emp.id" :value="emp.id">
+                    {{ emp.first_name }} {{ emp.last_name }}
+                  </option>
+                </select>
+              </div>
+
+              <div v-if="props.section === 'hr'" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-700">Type de demande</label>
+                  <select v-model="form.leave_type" required class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100">
+                    <option value="Congé">Congé</option>
+                    <option value="Absence">Absence</option>
+                    <option value="Avance sur Salaire">Avance sur Salaire</option>
+                    <option value="Document">Document</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-700">Date de début</label>
+                  <input type="date" v-model="form.start_date" required class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100" />
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-gray-700">Date de fin</label>
+                  <input type="date" v-model="form.end_date" required class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100" />
+                </div>
               </div>
 
               <div>
@@ -90,9 +121,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { employeeService } from '@/services/employees';
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
+
+const employees = ref<any[]>([]);
+
+onMounted(async () => {
+  try {
+    const res = await employeeService.getAllEmployees();
+    employees.value = res.data;
+  } catch (error) {
+    console.error("Error loading employees", error);
+  }
+});
 
 const props = defineProps<{
   section: 'hr' | 'it' | 'facilities';
@@ -148,10 +194,14 @@ const sectionMeta = computed(() => {
 });
 
 const form = reactive({
+  employee_id: '',
   subject: '',
   description: '',
   priority: 'Normal',
-  attachment: ''
+  attachment: '',
+  start_date: new Date().toISOString().split('T')[0],
+  end_date: new Date().toISOString().split('T')[0],
+  leave_type: 'Congé'
 });
 
 const isSubmitting = reactive({
@@ -181,17 +231,16 @@ const submitRequest = async () => {
         request_type: 'Maintenance'
       });
     } else if (props.section === 'hr') {
-      const today = new Date().toISOString().split('T')[0];
-      // Fetch employees to get a valid ID instead of hardcoding
-      const employeesRes = await api.get('/employees/');
-      const employeeId = employeesRes.data.length > 0 ? employeesRes.data[0].id : null;
-      if (!employeeId) throw new Error('No employees available');
-
-      await api.post('/hr-requests/', {
-        employee_id: employeeId,
-        request_type: 'Leave',
-        start_date: today,
-        end_date: today
+      await api.post('/requests/', {
+        type: 'LEAVE',
+        description: form.description,
+        payload: {
+          employee_id: form.employee_id,
+          start_date: form.start_date,
+          end_date: form.end_date,
+          leave_type: form.leave_type,
+          reason: form.subject
+        }
       });
     }
 
@@ -199,10 +248,10 @@ const submitRequest = async () => {
     form.description = '';
     form.priority = 'Normal';
     form.attachment = '';
-    window.alert('Demande envoyee.');
+    toast.success('Demande envoyée.');
   } catch (error) {
     console.error('Erreur lors de la création de la demande', error);
-    window.alert('Impossible de créer la demande pour le moment.');
+    toast.error('Impossible de créer la demande pour le moment.');
   } finally {
     isSubmitting.value = false;
   }

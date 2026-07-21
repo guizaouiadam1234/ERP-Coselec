@@ -15,18 +15,7 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "employees.create": ("Employes - creation", "Creer des employes"),
     "employees.update": ("Employes - mise a jour", "Modifier des employes"),
     "employees.delete": ("Employes - suppression", "Supprimer des employes"),
-    "it_requests.read": ("IT - lecture", "Consulter les requêtes IT"),
-    "it_requests.create": ("IT - creation", "Créer des requêtes IT"),
-    "it_requests.update": ("IT - mise a jour", "Modifier des requêtes IT"),
-    "it_requests.delete": ("IT - suppression", "Supprimer des requêtes IT"),
-    "facility_requests.read": ("Facilities - lecture", "Consulter les requêtes logistiques"),
-    "facility_requests.create": ("Facilities - creation", "Créer des requêtes logistiques"),
-    "facility_requests.update": ("Facilities - mise a jour", "Modifier des requêtes logistiques"),
-    "facility_requests.delete": ("Facilities - suppression", "Supprimer des requêtes logistiques"),
-    "hr_requests.read": ("HR - lecture", "Consulter les requêtes RH"),
-    "hr_requests.create": ("HR - creation", "Créer des requêtes RH"),
-    "hr_requests.update": ("HR - mise a jour", "Modifier des requêtes RH"),
-    "hr_requests.delete": ("HR - suppression", "Supprimer des requêtes RH"),
+
     "notifications.read": ("Notifications - lecture", "Consulter ses notifications"),
     "notifications.update": ("Notifications - mise a jour", "Marquer les notifications"),
     "hr.read": ("Planning RH - lecture", "Consulter le planning RH"),
@@ -55,8 +44,8 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "fuel_requests.create": ("Fuel - creation", "Créer des requêtes de carburant"),
     "fuel_requests.update": ("Fuel - mise a jour", "Modifier des requêtes de carburant"),
     "fuel_requests.delete": ("Fuel - suppression", "Supprimer des requêtes de carburant"),
-    "fuel_requests.validate_finance": ("Fuel - valider finance", "Valider financièrement les requêtes de carburant")
-
+    "fuel_requests.validate_finance": ("Fuel - valider finance", "Valider financièrement les requêtes de carburant"),
+    "requests.validate_hr": ("Demandes - valider RH", "Valider les demandes RH unifiées")
 }
 
 
@@ -68,14 +57,8 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
     "Employe": {
         "description": "Acces standard collaborateur",
         "permissions": {
-            "it_requests.read",
-            "it_requests.create",
-            "facility_requests.read",
-            "facility_requests.create",
             "fuel_requests.read",
             "fuel_requests.create",
-            "hr_requests.read",
-            "hr_requests.create",
             "notifications.read",
             "notifications.update",
             "stock.read",
@@ -95,10 +78,7 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "documents.read",
             "documents.create",
             "documents.delete",
-            "hr_requests.read",
-            "hr_requests.create",
-            "hr_requests.update",
-            "hr_requests.delete",
+            "requests.validate_hr",
             "notifications.read",
             "notifications.update",
         },
@@ -116,10 +96,7 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "dashboard.read",
             "stock.read",
             "employees.read",
-            "it_requests.read",
-            "facility_requests.read",
             "fuel_requests.read",
-            "hr_requests.read",
             "notifications.read",
         },
     },
@@ -134,8 +111,6 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "tasks.create",
             "tasks.update",
             "tasks.delete",
-            "it_requests.read",
-            "it_requests.update",
             "stock.read",
             "notifications.read",
             "notifications.update",
@@ -148,8 +123,6 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "stock.create",
             "stock.update",
             "stock.delete",
-            "facility_requests.read",
-            "facility_requests.update",
             "fuel_requests.read",
             "fuel_requests.update",
             "dashboard.read",
@@ -160,8 +133,6 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
     "Maintenance": {
         "description": "Maintenance et interventions",
         "permissions": {
-            "facility_requests.read",
-            "facility_requests.update",
             "stock.read",
             "notifications.read",
             "notifications.update",

@@ -5,9 +5,6 @@ from app.core.database import get_db
 
 from app.models.project.project import Project, ProjectStatus
 from app.modules.users.models.employee import Employee
-from app.models.hr.hr_request import HRRequest, HRRequestStatus
-from app.models.it_request import ITRequest, ITRequestStatus
-from app.models.facility_request import FacilityRequest, FacilityRequestStatus
 from app.modules.requests.models.fuel_request import FuelRequest, FuelRequestStatus
 from app.models.stock.stock import Stock
 from app.models.stock.stockmovement import StockMovement
@@ -20,13 +17,9 @@ def get_dashboard_kpis(db: Session = Depends(get_db)):
     total_employees = db.query(Employee).count()
     
     # Calculate total pending requests
-    pending_hr = db.query(HRRequest).filter(HRRequest.status == HRRequestStatus.PENDING).count()
-    pending_it = db.query(ITRequest).filter(ITRequest.status == ITRequestStatus.PENDING).count()
-    pending_facility = db.query(FacilityRequest).filter(FacilityRequest.status == FacilityRequestStatus.PENDING).count()
     pending_fuel_logistics = db.query(FuelRequest).filter(FuelRequest.status == FuelRequestStatus.PENDING_LOGISTICS).count()
     pending_fuel_finance = db.query(FuelRequest).filter(FuelRequest.status == FuelRequestStatus.PENDING_FINANCE).count()
-    total_pending_requests = pending_hr + pending_it + pending_facility + pending_fuel_logistics + pending_fuel_finance
-
+    total_pending_requests = pending_fuel_logistics + pending_fuel_finance
     # Stock alerts (quantity <= 10)
     stock_alerts = db.query(Stock).filter(Stock.quantity <= 10).count()
 
@@ -51,15 +44,6 @@ def get_recent_activity(db: Session = Depends(get_db)):
             "sort_key": p.id # Proxy for date
         })
 
-    # Get latest 2 HR requests
-    latest_hr = db.query(HRRequest).order_by(HRRequest.created_at.desc()).limit(2).all()
-    for req in latest_hr:
-        activities.append({
-            "action": f"Demande RH: {req.request_type} par {req.employee.first_name if req.employee else 'Employé'}",
-            "time": req.created_at.strftime("%Y-%m-%d") if req.created_at else "Récemment",
-            "icon": "groups",
-            "sort_key": req.id
-        })
 
     # Get latest 2 stock movements
     latest_movements = db.query(StockMovement).order_by(StockMovement.created_at.desc()).limit(2).all()

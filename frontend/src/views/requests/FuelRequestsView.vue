@@ -172,6 +172,9 @@ import Sidebar from '@/components/Sidebar.vue';
 import Navbar from '@/components/Navbar.vue';
 import { api } from '@/services/api';
 import { employeeService } from '@/services/employees';
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
 
 const requests = ref<any[]>([]);
 const employees = ref<any[]>([]);
@@ -260,7 +263,7 @@ async function submitRequest() {
     await fetchRequests();
   } catch (e) {
     console.error("Error creating request", e);
-    alert("Erreur lors de la création de la demande");
+    toast.error("Erreur lors de la création de la demande");
   }
 }
 
@@ -270,10 +273,10 @@ async function validateFinance(id: number) {
       action: 'APPROVE'
     });
     await fetchRequests();
-    alert("Demande validée ! Le PDF a été généré dans MinIO.");
+    toast.success("Demande validée ! Le PDF a été généré dans MinIO.");
   } catch (e) {
     console.error("Error validating", e);
-    alert("Erreur lors de la validation. Vérifiez vos permissions.");
+    toast.error("Erreur lors de la validation. Vérifiez vos permissions.");
   }
 }
 
@@ -284,7 +287,7 @@ async function deleteRequest(id: number) {
     await fetchRequests();
   } catch (e) {
     console.error("Error deleting request", e);
-    alert("Erreur lors de la suppression. Vérifiez vos permissions.");
+    toast.error("Erreur lors de la suppression. Vérifiez vos permissions.");
   }
 }
 

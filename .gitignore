@@ -20,3 +20,8 @@ env/
 
 #pdf files that aregenerated 
 **/uploads/*.pdf
+
+# pycache 
+.pyc
+**/*.pyc
+**/__pycache__/*.pyc

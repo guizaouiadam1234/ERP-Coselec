@@ -14,12 +14,12 @@ from app.modules.users.schemas.register import RegisterRequest
 from app.core.security.middleware import SlidingSessionMiddleware
 from app.modules.users.routes.auth import router as auth_router
 from app.modules.users.routes.users import router as users_router
+from app.modules.requests_unified.routes.requests import router as generic_requests_router
 
 #hr routers
 from app.modules.users.routes.employees import router as employees_router
 from app.routers.planning import router as planning_router
 from app.routers.contracts import router as contracts_router
-from app.routers.hr_requests import router as hr_requests_router
 from app.routers.documents import router as documents_router
 ## stock routers
 from app.routers.stock.stocks import router as stocks_router
@@ -30,8 +30,6 @@ from app.routers.stock.products import router as products_router
 from app.routers.stock.warehouses import router as warehouses_router
 from app.routers.stock.partners import router as partners_router
 from app.routers.stock.categories import router as categories_router
-from app.routers.it_requests import router as it_requests_router
-from app.routers.facility_requests import router as facility_requests_router
 from app.modules.requests.routes.fuel_requests import router as fuel_requests_router
 #notifications router
 from app.routers.notifications import router as notifications_router
@@ -63,11 +61,8 @@ from app.models.stock.stock import Stock
 from app.models.stock.stockmovement import StockMovement
 from app.models.stock.warehouse import Warehouse
 from app.models.notification import NotificationType, Notification
-from app.models.it_request import ITRequest
-from app.models.facility_request import FacilityRequest
-from app.models.hr.hr_request import HRRequest
-from app.models.hr.leave_request import LeaveRequest
 from app.models.hr.contract import Contract
+from app.modules.requests_unified.models.request import GenericRequest
 from app.models.hr.document import EmployeeDocument
 from app.modules.requests.models.fuel_request import FuelRequest
 from app.models.project.project import Project
@@ -109,7 +104,6 @@ app = FastAPI(lifespan=lifespan)
 
 from app.routers.caisse import router as caisse_router
 from app.routers.departments import router as departments_router
-from app.routers.leave_requests import router as leave_requests_router
 
 from app.routers.dashboard import router as app_dashboard_router
 
@@ -124,11 +118,8 @@ app.include_router(warehouses_router)
 app.include_router(partners_router)
 app.include_router(categories_router)
 app.include_router(planning_router)
-app.include_router(it_requests_router)
-app.include_router(facility_requests_router)
 app.include_router(notifications_router)
 app.include_router(contracts_router)
-app.include_router(hr_requests_router)
 app.include_router(documents_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
@@ -140,8 +131,8 @@ app.include_router(auth_router)
 app.include_router(fuel_requests_router)
 app.include_router(caisse_router)
 app.include_router(departments_router)
-app.include_router(leave_requests_router)
 app.include_router(users_router)
+app.include_router(generic_requests_router)
 
 
 raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "")

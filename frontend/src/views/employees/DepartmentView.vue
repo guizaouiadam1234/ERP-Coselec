@@ -2,6 +2,9 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import api from '@/services/api';
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
 
 interface Department {
   id: number;
@@ -145,7 +148,7 @@ const submitAssignment = async (): Promise<void> => {
     await fetchHRData(); // Dynamic calendar live refresh loop
   } catch (error) {
     console.error("Erreur lors de l'affectation", error);
-    alert("Impossible de sauvegarder les modifications.");
+    toast.error("Impossible de sauvegarder les modifications.");
   } finally {
     isSaving.value = false;
   }

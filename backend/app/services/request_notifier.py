@@ -41,30 +41,11 @@ async def notify_request_status_change(request_id: int, request_category: str, n
         
         # We need to fetch the request to get creator_id / employee_id
         request_obj = None
-        if request_category == "HR":
-            from app.models.hr.hr_request import HRRequest
-            request_obj = db.get(HRRequest, request_id)
+        if request_category == "Generic":
+            from app.modules.requests_unified.models.request import GenericRequest
+            request_obj = db.get(GenericRequest, request_id)
             if request_obj:
-                employee = db.query(Employee).filter(Employee.id == request_obj.employee_id).first()
-                if employee:
-                    creator_email = employee.email
-                    # Try to find a user with the same email to send in-app notification
-                    user = db.query(User).filter(User.email == employee.email).first()
-                    if user:
-                        creator_id = user.id
-        elif request_category == "Facility":
-            from app.models.facility_request import FacilityRequest
-            request_obj = db.get(FacilityRequest, request_id)
-            if request_obj:
-                user = db.query(User).filter(User.id == request_obj.creator_id).first()
-                if user:
-                    creator_email = user.email
-                    creator_id = user.id
-        elif request_category == "IT":
-            from app.models.it_request import ITRequest
-            request_obj = db.get(ITRequest, request_id)
-            if request_obj:
-                user = db.query(User).filter(User.id == request_obj.creator_id).first()
+                user = db.query(User).filter(User.id == request_obj.requester_id).first()
                 if user:
                     creator_email = user.email
                     creator_id = user.id

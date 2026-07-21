@@ -112,6 +112,9 @@ import { ref } from 'vue';
 import Sidebar from '@/components/Sidebar.vue';
 import Navbar from '@/components/Navbar.vue';
 import { api } from '@/services/api';
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
 
 const form = ref({
   num: '',
@@ -136,7 +139,7 @@ async function generateCaissePdf() {
     }
   } catch (e) {
     console.error("Erreur lors de la génération", e);
-    alert("Une erreur est survenue lors de la génération du PDF.");
+    toast.error("Une erreur est survenue lors de la génération du PDF.");
   }
 }
 </script>

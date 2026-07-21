@@ -16,10 +16,6 @@ class User(Base):
     locked_until = Column(DateTime, nullable=True)
     requires_password_change = Column(Boolean, default=False)
 
-    created_it_requests = relationship("ITRequest", foreign_keys="ITRequest.creator_id", back_populates="creator")
-    assigned_it_requests = relationship("ITRequest", foreign_keys="ITRequest.assigned_to_id", back_populates="assigned_to")
-    created_facility_requests = relationship("FacilityRequest", foreign_keys="FacilityRequest.creator_id", back_populates="creator")
-    assigned_facility_requests = relationship("FacilityRequest", foreign_keys="FacilityRequest.assigned_to_id", back_populates="assigned_to")
 
     notifications = relationship(
         "Notification",

@@ -60,30 +60,14 @@ const routes = [
     },
   },
   // requests boards
-  {
-    path: "/it-requests",
-    name: "it-requests",
-    component: () => import("../views/requests/ITRequestsView.vue"),
-    meta: { requiredRoles: ["Admin", "IT"] }
-  },
-  {
-    path: "/facility-requests",
-    name: "facility-requests",
-    component: () => import("../views/requests/FacilityRequestsView.vue"),
-    meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction", "Finance"] }
-  },
+
   {
     path: "/fuel-requests",
     name: "fuel-requests",
     component: () => import("../views/requests/FuelRequestsView.vue"),
     meta: { requiredRoles: ["Admin", "Facility", "Logistique", "Direction", "Finance"] }
   },
-  {
-    path: "/hr-requests",
-    name: "hr-requests",
-    component: () => import("../views/requests/HRRequestsView.vue"),
-    meta: { requiredRoles: ["Admin", "RH", "Direction"] }
-  },
+
   {
     path: "/requests",
     name: "requests",
@@ -109,6 +93,12 @@ const routes = [
     props:true
   },
   // Admin Routes
+  {
+    path: "/admin/requests",
+    name: "admin-requests",
+    component: () => import("@/views/Admin/AdminRequestsView.vue"),
+    meta: { requiredRoles: ["Admin", "RH", "Direction"] }
+  },
   {
     path: "/admin/users",
     name: "admin-users",

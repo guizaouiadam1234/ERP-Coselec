@@ -292,6 +292,9 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import { employeeService } from "@/services/employees";
 import { api } from "@/services/api";
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
 
 // IMPORT DE SOUS-COMPOSANTS
 import EmployeeContracts from "@/components/employees/EmployeeContracts.vue";
@@ -375,7 +378,7 @@ async function submitEmployee() {
     employees.value = response.data;
   } catch (e) {
     console.error("Error creating employee", e);
-    alert("Erreur lors de la création de l'employé");
+    toast.error("Erreur lors de la création de l'employé");
   }
 }
 

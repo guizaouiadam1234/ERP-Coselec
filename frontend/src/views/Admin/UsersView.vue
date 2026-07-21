@@ -71,6 +71,9 @@ import UserList from '@/components/users/UserList.vue';
 import UserForm from '@/components/users/UserForm.vue';
 import { userService, type User } from '@/services/userService';
 import { getStoredProfile } from '@/services/session';
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
 
 const profile = getStoredProfile();
 const currentUserId = profile?.id;
@@ -143,7 +146,7 @@ const confirmDelete = async (user: User) => {
       fetchUsers(currentPage.value);
     } catch (error) {
       console.error('Failed to delete user:', error);
-      alert("Erreur lors de la suppression de l'utilisateur.");
+      toast.error("Erreur lors de la suppression de l'utilisateur.");
     }
   }
 };
