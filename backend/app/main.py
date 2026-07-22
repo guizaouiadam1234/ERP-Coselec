@@ -37,6 +37,7 @@ from app.routers.notifications import router as notifications_router
 from app.routers.project.projects import router as projects_router
 from app.routers.project.tasks import router as tasks_router
 from app.routers.project.budget import router as budgets_router
+from app.routers.project.assignments import router as assignments_router
 from app.routers.procurement import router as procurement_router
 from app.routers.stock_reservations import router as stock_reservations_router
 from app.routers.portfolio import router as portfolio_router
@@ -124,6 +125,7 @@ app.include_router(documents_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(budgets_router)
+app.include_router(assignments_router)
 app.include_router(procurement_router)
 app.include_router(stock_reservations_router)
 app.include_router(portfolio_router)

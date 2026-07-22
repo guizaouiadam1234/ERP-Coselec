@@ -21,3 +21,7 @@ class ProjectBudget(Base):
     @property
     def consumed(self) -> float:
         return sum(e.amount for e in self.expenses if getattr(e.status, 'value', e.status) == "Approved")
+
+    @property
+    def remaining_amount(self) -> float:
+        return self.allocated_amount - self.consumed

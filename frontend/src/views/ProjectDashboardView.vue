@@ -20,6 +20,7 @@ const toast = useToast()
 const projects = ref<any[]>([]);
 const selectedProjectId = ref<number | null>(null);
 const loading = ref(true);
+const hrStats = ref<any>(null);
 
 const kpis = ref([
   { title: "Progression Globale", value: "0%", color: "text-purple-600", bg: "bg-purple-50" },
@@ -75,6 +76,7 @@ const fetchDashboardData = async () => {
         }
       ]
     };
+    hrStats.value = res.data.hr_stats;
   } catch {
     // KPI cards keep defaults
   } finally {
@@ -144,6 +146,42 @@ const downloadProjectReport = async () => {
           <h2 class="text-lg font-bold text-gray-900 mb-4">Dépenses Financières Annuelles</h2>
           <div class="h-80 w-full">
             <Bar :data="chartData" :options="chartOptions" />
+          </div>
+        </div>
+        
+        <!-- HR Stats Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" v-if="hrStats">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[#d10f2f]">group</span>
+              Ressources Humaines Actives
+            </h2>
+            <div class="space-y-4">
+              <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <span class="text-gray-500 font-medium">Employés affectés</span>
+                <span class="font-bold text-gray-900 text-lg">{{ hrStats.num_assigned_employees }}</span>
+              </div>
+              <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <span class="text-gray-500 font-medium">Allocation moyenne</span>
+                <span class="font-bold text-[#d10f2f] text-lg">{{ hrStats.average_allocation }}%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[#d10f2f]">work</span>
+              Distribution par Rôle
+            </h2>
+            <div class="space-y-3 max-h-48 overflow-y-auto pr-2">
+              <div v-for="(count, role) in hrStats.role_distribution" :key="role" class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <span class="text-gray-700 font-medium">{{ role }}</span>
+                <span class="bg-[#d10f2f] text-white w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">{{ count }}</span>
+              </div>
+              <div v-if="Object.keys(hrStats.role_distribution || {}).length === 0" class="text-gray-400 text-sm italic text-center py-4">
+                Aucune donnée de ressource humaine.
+              </div>
+            </div>
           </div>
         </div>
       </template>

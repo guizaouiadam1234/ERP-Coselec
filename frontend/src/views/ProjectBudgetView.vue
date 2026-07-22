@@ -78,8 +78,9 @@ const createExpense = async () => {
     expenseForm.value = { budget_id: null, amount: 0, date_incurred: '', description: '' };
     toast.success('Dépense enregistrée.');
     await fetchBudgetData();
-  } catch {
-    toast.error("Erreur lors de l'enregistrement de la dépense.");
+  } catch (error:any) {
+    const errorDetail = error.response?.data.detail;
+    toast.error(errorDetail || "Erreur lors de l'enregistrement de la dépense.");
   }
 };
 

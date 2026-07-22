@@ -66,6 +66,8 @@ def add_expense(project_id: int, expense: ExpenseCreate, db: Session = Depends(g
         budget = db.query(ProjectBudget).filter(ProjectBudget.id == expense.budget_id, ProjectBudget.project_id == project_id).first()
         if not budget:
             raise HTTPException(status_code=404, detail="Budget not found for this project")
+        if expense.amount > budget.remaining_amount:
+            raise HTTPException(status_code=400, detail="Expense amount exceeds budget")
             
     db_expense = ProjectExpense(
         project_id=project_id,

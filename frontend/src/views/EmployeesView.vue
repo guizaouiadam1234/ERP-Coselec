@@ -273,14 +273,22 @@
             <EmployeeDocuments :employeeId="selectedEmployee.id" />
           </section>
 
-          <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
-            <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
-              <span class="material-symbols-outlined text-base">event_available</span>
-              <span>Congés</span>
-            </h3>
-            <EmployeeLeaves :employeeId="selectedEmployee.id" />
-          </section>
-        </div>
+            <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+              <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">event_available</span>
+                <span>Congés</span>
+              </h3>
+              <EmployeeLeaves :employeeId="selectedEmployee.id" />
+            </section>
+
+            <section class="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+              <h3 class="text-sm font-bold text-[#7f071c] uppercase tracking-wider mb-4 border-b border-red-100 pb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">business_center</span>
+                <span>Projets Assignés</span>
+              </h3>
+              <EmployeeProjects :employeeId="selectedEmployee.id" />
+            </section>
+          </div>
       </div>
       </div>
   </div>
@@ -300,6 +308,7 @@ const toast = useToast();
 import EmployeeContracts from "@/components/employees/EmployeeContracts.vue";
 import EmployeeDocuments from "@/components/employees/EmployeeDocuments.vue";
 import EmployeeLeaves from "@/components/employees/EmployeeLeaves.vue";
+import EmployeeProjects from "@/components/employees/EmployeeProjects.vue";
 
 interface Employee {
   id: number;

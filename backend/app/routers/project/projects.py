@@ -182,7 +182,8 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
     project = db.query(Project).options(
         joinedload(Project.expenses),
         joinedload(Project.milestones),
-        joinedload(Project.budgets)
+        joinedload(Project.budgets),
+        joinedload(Project.assignments)
     ).filter(Project.id == project_id).first()
 
     if not project:
@@ -223,6 +224,15 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
         chart_labels.append(french_months[month-1])
         chart_data.append(monthly_expenses[month])
 
+    # 6. HR Data
+    active_assignments = [a for a in getattr(project, "assignments", []) if getattr(a, "current_status", "Active") == "Active"]
+    num_assigned_employees = len(set(a.employee_id for a in active_assignments))
+    avg_allocation = sum(a.allocation for a in active_assignments) / len(active_assignments) if active_assignments else 0.0
+    
+    role_distribution = defaultdict(int)
+    for a in active_assignments:
+        role_distribution[a.role] += 1
+
     return {
         "kpis": [
             { "title": "Progression Globale", "value": f"{progression_percent}%", "color": "text-purple-600", "bg": "bg-purple-50" },
@@ -235,5 +245,10 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
             "data": chart_data,
             "total_budget": total_budget,
             "total_expenses": total_expenses
+        },
+        "hr_stats": {
+            "num_assigned_employees": num_assigned_employees,
+            "average_allocation": round(avg_allocation, 1),
+            "role_distribution": dict(role_distribution)
         }
     }
