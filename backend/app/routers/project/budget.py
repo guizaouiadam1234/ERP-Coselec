@@ -19,9 +19,7 @@ class BudgetResponse(BudgetCreate):
     project_id: int
     created_at: datetime
     
-    @computed_field
-    def consumed(self) -> float:
-        return sum(e.amount for e in self.expenses) if getattr(self, "expenses", None) else 0.0
+    consumed: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)
 

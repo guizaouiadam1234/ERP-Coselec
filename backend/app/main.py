@@ -143,7 +143,8 @@ default_origins = [
     "http://192.190.100.41:5173",
     "http://192.190.100.48:5173",
     "http://192.190.100.104:5173",
-    "http://localhost"
+    "http://localhost",
+    "http://169.254.34.100:5173"
 ]
 allow_origins = [
     origin.strip().rstrip("/")

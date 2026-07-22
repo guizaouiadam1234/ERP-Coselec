@@ -43,25 +43,25 @@
         </div>
 
         <div v-if="milestones.length > 0" class="flex gap-2 overflow-x-auto border-b border-gray-200">
-            <button
+            <div
                 v-for="m in milestones" 
                 :key="m.id"
                 @click="selectMilestone(m.id)"
                 :class="[
-                    'relative px-5 py-3 flex flex-col items-start gap-1 transition-colors border-b-2 focus:outline-none',
+                    'relative px-5 py-3 flex flex-col items-start justify-center gap-2 transition-colors border-b-2 cursor-pointer select-none',
                     selectedMilestone === m.id 
-                      ? 'border-red-600 bg-red-50/50' 
+                      ? 'border-red-600 bg-red-50' 
                       : 'border-transparent hover:bg-gray-50 text-gray-500 hover:text-gray-700'
                 ]"
             >
                 <span :class="['font-semibold text-sm', selectedMilestone === m.id ? 'text-red-700' : '']">{{ m.title }}</span>
                 <span 
-                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" 
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block leading-none" 
                     :class="m.status === 'Achieved' ? 'bg-green-100 text-green-700' : (m.status === 'Active' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500')"
                 >
                     {{ m.status === 'Achieved' ? 'Terminé' : (m.status === 'Active' ? 'En cours' : 'À venir') }}
                 </span>
-            </button>
+            </div>
         </div>
 
         <div class="relative w-full min-h-75">

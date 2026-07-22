@@ -65,7 +65,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not email:
         raise HTTPException(status_code=422, detail="email or username is required")
 
-    print(f"DEBUG: login request for: {email}, password: {payload.password}")
     user = db.query(User).filter(User.email == email).first()
     if not user:
         print(f"DEBUG: user {email} not found in DB")

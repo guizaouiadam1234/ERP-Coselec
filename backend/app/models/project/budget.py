@@ -17,3 +17,7 @@ class ProjectBudget(Base):
 
     project = relationship("Project", back_populates="budgets")
     expenses = relationship("ProjectExpense", back_populates="budget", cascade="all, delete-orphan")
+
+    @property
+    def consumed(self) -> float:
+        return sum(e.amount for e in self.expenses if getattr(e.status, 'value', e.status) == "Approved")

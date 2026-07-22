@@ -158,6 +158,12 @@ onMounted(async () => {
           label="Demandes Carburant"
           :collapsed="collapsed"
         />
+        <SidebarItem
+          to="/caisse"
+          icon="receipt_long"
+          label="Pièce de Caisse"
+          :collapsed="collapsed"
+        />
       </div>
 
 
@@ -212,23 +218,6 @@ onMounted(async () => {
         <SidebarItem to="/projects" icon="work" label="Projets" :collapsed="collapsed"></SidebarItem>
         <SidebarItem to="/portfolio" icon="pie_chart" label="Portfolio" :collapsed="collapsed"></SidebarItem>
         <SidebarItem to="/project-budget" icon="account_balance_wallet" label="Budgets" :collapsed="collapsed"></SidebarItem>
-      </div>
-
-      <!-- Documents -->
-      <div v-if="canViewDocuments">
-        <h2
-          v-if="!collapsed"
-          class="text-xs uppercase text-red-200 mb-2"
-        >
-          Documents
-        </h2>
-
-        <SidebarItem
-          to="/caisse"
-          icon="receipt_long"
-          label="Pièce de Caisse"
-          :collapsed="collapsed"
-        />
       </div>
 
       <!-- Admin -->
