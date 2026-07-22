@@ -55,7 +55,7 @@ Le projet repose sur une architecture moderne séparant le frontend du backend.
 - **Base de Données** : PostgreSQL avec SQLAlchemy (ORM) et Alembic (Migrations).
 - **Tâches en arrière-plan** : APScheduler.
 - **Génération PDF** : ReportLab.
-- **Stockage Fichiers** : MinIO (S3-compatible) / Système de fichiers local.
+- **Stockage Fichiers** : Cloudflare R2 / Système de fichiers local.
 
 **Infrastructure**
 - Docker & Docker Compose (pour la DB et/ou les environnements complets).
@@ -70,7 +70,7 @@ L'architecture suit un modèle Client-Serveur classique de type "Single Page App
 graph TD
     Client[Navigateur Web / Vue.js] -->|Requêtes HTTP / Axios| API[Backend FastAPI]
     API -->|SQLAlchemy ORM| DB[(PostgreSQL)]
-    API -->|Sauvegarde de Fichiers| Storage[MinIO / Dossier uploads/]
+    API -->|Sauvegarde de Fichiers| Storage[Cloudflare R2 / Dossier uploads/]
     API -->|Génération PDF| ReportLab[Générateur PDF]
     Cron[APScheduler] -->|Tâches de fond| API
 ```
@@ -202,7 +202,7 @@ Principaux domaines de la modélisation :
 En production, l'approche recommandée consiste à :
 1. Construire l'image du Backend (`Dockerfile` basé sur Python).
 2. Construire l'image du Frontend (`Dockerfile` qui builde les assets statiques avec `npm run build-only` et les sert via un serveur web Nginx).
-3. Utiliser des services managés pour la base PostgreSQL et pour le stockage S3 (MinIO ou AWS).
+3. Utiliser des services managés pour la base PostgreSQL et pour le stockage S3 (Cloudflare ou AWS).
 4. S'assurer que le reverse proxy (Nginx/Traefik) redirige correctement les requêtes `/api` vers le backend et gère le HTTPS.
 
 ---
