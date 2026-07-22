@@ -36,10 +36,13 @@ class Task(Base):
     author_id = Column(Integer, ForeignKey("users.id"), nullable= False)
     assignee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
     project_id= Column(Integer, ForeignKey("projects.id"), nullable=True)
+    milestone_id = Column(Integer, ForeignKey("project_milestones.id", ondelete="SET NULL"), nullable=True)
 
     #extensions de modèle
     task_metadata = Column(JSON, nullable=True)
+    weight = Column(Integer, default=1, nullable=False)
 
     #relationships
     documents = relationship("TaskDocument", back_populates="task", cascade="all, delete-orphan")
+    milestone = relationship("ProjectMilestone", back_populates="tasks")
     

@@ -7,12 +7,12 @@
           <div class="flex items-center space-x-4">
             <span class="material-symbols-outlined text-[#d10f2f]">work</span>
             <h2 class="text-2xl font-bold text-[#b30c27]">Projet à gérer</h2>
-            <select v-model="selectedProject" @change="loadTasks" class="border-2 w-max h-10 rounded-lg px-2">
+            <select v-model="selectedProject" @change="onProjectChange" class="border-2 w-max h-10 rounded-lg px-2">
                <option v-for="p in projects" :key="p.id" :value="p.nom">
                  {{ p.nom }}
                </option>
             </select>
-            <button class ="ml-5 bg-[#d10f2f] border-2 border-[#b30c27] rounded-lg w-40 h-10 text-white flex items-center"
+            <button class ="ml-5 bg-[#d10f2f] border-2 border-[#b30c27] rounded-lg w-40 h-10 text-white flex items-center justify-center"
             v-if="selectedProject"
             @click="openTaskCreateModal"
             >
@@ -42,7 +42,28 @@
           </div>
         </div>
 
-       
+        <div v-if="milestones.length > 0" class="flex gap-2 overflow-x-auto border-b border-gray-200">
+            <button
+                v-for="m in milestones" 
+                :key="m.id"
+                @click="selectMilestone(m.id)"
+                :class="[
+                    'relative px-5 py-3 flex flex-col items-start gap-1 transition-colors border-b-2 focus:outline-none',
+                    selectedMilestone === m.id 
+                      ? 'border-red-600 bg-red-50/50' 
+                      : 'border-transparent hover:bg-gray-50 text-gray-500 hover:text-gray-700'
+                ]"
+            >
+                <span :class="['font-semibold text-sm', selectedMilestone === m.id ? 'text-red-700' : '']">{{ m.title }}</span>
+                <span 
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" 
+                    :class="m.status === 'Achieved' ? 'bg-green-100 text-green-700' : (m.status === 'Active' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500')"
+                >
+                    {{ m.status === 'Achieved' ? 'Terminé' : (m.status === 'Active' ? 'En cours' : 'À venir') }}
+                </span>
+            </button>
+        </div>
+
         <div class="relative w-full min-h-75">
   <GanttView 
     v-if="currentView === 'Gantt'" 
@@ -55,6 +76,7 @@
   key="kanban-board-layout" 
   :tasks="tasks" 
   :employees-list="employees"
+  :milestones-list="milestones"
   @update-task="handleTaskUpdate"
   />
   <ProjectResources
@@ -70,6 +92,8 @@
       v-if="isTaskCreateModalOpen"
       :open="isTaskCreateModalOpen"
       :employees="employees"
+      :milestones="milestones"
+      :default-milestone-id="selectedMilestone"
       @close="closeTaskCreateModal"
       @create="handleTaskCreate"
     />
@@ -97,8 +121,10 @@ interface Project {
 const tasks = ref([]);
 const projects = ref<Project[]>([]);
 const employees = ref([]);
+const milestones = ref<any[]>([]);
 const currentView = shallowRef('Kanban');
 const selectedProject = ref<string | null>(null);
+const selectedMilestone = ref<number | null>(null);
 const isTaskCreateModalOpen = ref(false);
 
 
@@ -121,6 +147,33 @@ const resolveActiveProjectId = (): number | null => {
   return Number.isFinite(routeId) && routeId > 0 ? routeId : null;
 };
 
+const onProjectChange = async () => {
+    const project = projects.value.find(p => p.nom === selectedProject.value);
+    if (project) {
+        try {
+            const msRes = await projectService.getProjectMilestones(project.id);
+            milestones.value = msRes.data || [];
+            
+            const activeMilestone = milestones.value.find(m => m.status === 'Active') || milestones.value[0];
+            if (activeMilestone) {
+                selectedMilestone.value = activeMilestone.id;
+            } else {
+                selectedMilestone.value = null;
+            }
+        } catch (e) {
+            console.error(e);
+            milestones.value = [];
+            selectedMilestone.value = null;
+        }
+    }
+    await loadTasks();
+};
+
+const selectMilestone = async (id: number) => {
+    selectedMilestone.value = id;
+    await loadTasks();
+}
+
 const handleTaskCreate = async (rawData: any) => {
   try {
     const projectId = resolveActiveProjectId();
@@ -140,7 +193,9 @@ const handleTaskCreate = async (rawData: any) => {
     }
 
     isTaskCreateModalOpen.value = false;
-    await loadTasks();
+    
+    // Refresh milestones in case one was completed (although creation shouldn't complete one, it's safer)
+    await onProjectChange(); 
   } catch (error: any) {
     console.error('Erreur lors de la creation de la tache', error);
   }
@@ -151,7 +206,8 @@ const loadTasks = async () => {
   const project = projects.value.find(p => p.nom === selectedProject.value);
   if (project) {
         try {
-            const response = await taskService.getTasksByProject(project.id);
+            // Only fetch tasks for the selected milestone
+            const response = await taskService.getTasksByProject(project.id, selectedMilestone.value || undefined);
             tasks.value = response.data || [];
         } catch (error) {
             console.error("Erreur de chargement des tâches", error);
@@ -239,6 +295,14 @@ const handleTaskUpdate = async (taskId: number, rawData: any) => {
       cleanData.project_id = data.project_id;
     }
 
+    if (data.milestone_id !== undefined) {
+        cleanData.milestone_id = data.milestone_id || null;
+    }
+
+    if (data.weight !== undefined) {
+        cleanData.weight = data.weight;
+    }
+
     const start = data.start_date || data.date_debut;
     const due = data.due_date || data.date_fin;
 
@@ -268,7 +332,8 @@ const handleTaskUpdate = async (taskId: number, rawData: any) => {
       await taskService.uploadTaskDocuments(Number(projectId), taskId, files);
     }
 
-    await loadTasks();
+    // Refresh milestones in case this update changed the active milestone
+    await onProjectChange();
     
   } catch (error: any) {
     console.error("Failed to update task", error);
@@ -282,7 +347,7 @@ onMounted(async () => {
         
         if (projects.value.length > 0 && !selectedProject.value) {
             selectedProject.value = projects.value[0]?.nom || null;
-            await loadTasks();
+            await onProjectChange();
         }
         
         const empResponse = await employeeService.getAllEmployees();

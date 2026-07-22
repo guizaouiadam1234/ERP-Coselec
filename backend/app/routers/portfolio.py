@@ -16,9 +16,14 @@ def get_portfolio_kpis(db: Session = Depends(get_db)):
     total_budget = db.query(func.sum(ProjectBudget.allocated_amount)).scalar() or 0.0
     total_consumed = db.query(func.sum(ProjectExpense.amount)).scalar() or 0.0
     
+    completed_projects = db.query(Project).filter(Project.status.in_([ProjectStatus.FINISHED, ProjectStatus.CLOSED])).count()
+    pending_projects = db.query(Project).filter(Project.status.in_([ProjectStatus.STUDY, ProjectStatus.PLANNED, ProjectStatus.APPROVED])).count()
+
     return {
         "total_projects": total_projects,
         "ongoing_projects": ongoing_projects,
+        "completed_projects": completed_projects,
+        "pending_projects": pending_projects,
         "total_budget_allocated": total_budget,
         "total_budget_consumed": total_consumed,
         "budget_consumption_rate": round((total_consumed / total_budget * 100), 2) if total_budget > 0 else 0

@@ -12,7 +12,8 @@ class TaskBase(BaseModel):
     start_date: date | None = None  
     assignee_id: int | None = None
     project_id: int | None = None
-
+    milestone_id: int | None = None
+    weight: int = 1
 
 class TaskCreate(TaskBase):
     pass
@@ -33,6 +34,8 @@ class TaskResponse(BaseModel):
     author_id: int
     assignee_id: int | None
     project_id: int | None
+    milestone_id: int | None = None
+    weight: int
 
     model_config = {
         "from_attributes": True
@@ -48,6 +51,8 @@ class TaskUpdate(BaseModel):
     start_date: date | None = None
     due_date : date | None = None
     assignee_id : int | None = None
+    milestone_id : int | None = None
+    weight : int | None = None
 
 
 class TaskDocumentResponse(BaseModel):

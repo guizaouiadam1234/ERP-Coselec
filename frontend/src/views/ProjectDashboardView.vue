@@ -22,9 +22,9 @@ const selectedProjectId = ref<number | null>(null);
 const loading = ref(true);
 
 const kpis = ref([
+  { title: "Progression Globale", value: "0%", color: "text-purple-600", bg: "bg-purple-50" },
+  { title: "Jalons Terminés", value: "0/0", color: "text-green-600", bg: "bg-green-50" },
   { title: "Budget Consommé", value: "0%", color: "text-blue-600", bg: "bg-blue-50" },
-  { title: "Phases Terminées", value: "0/0", color: "text-green-600", bg: "bg-green-50" },
-  { title: "Jours Restants", value: "0", color: "text-amber-600", bg: "bg-amber-50" },
   { title: "Tâches Ouvertes", value: "0", color: "text-red-600", bg: "bg-red-50" },
 ]);
 

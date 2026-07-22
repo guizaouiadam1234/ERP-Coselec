@@ -20,6 +20,10 @@ const props = defineProps<{
     prenom?: string,
     first_name?: string,
     last_name?: string
+  }>,
+  milestones?: Array<{
+    id: number,
+    title: string
   }>
 }>()
 
@@ -185,6 +189,8 @@ const handleSave = () => {
     priority: localTask.value.priority,
     due_date: localTask.value.due_date,
     assignee_id: localTask.value.assignee_id,
+    milestone_id: localTask.value.milestone_id,
+    weight: Number(localTask.value.weight || 1),
     // On essaie de parser le JSON, sinon on l'envoie en null ou on gère l'erreur
     task_metadata: localTask.value.task_metadata ? JSON.parse(localTask.value.task_metadata) : null,
   }
@@ -273,6 +279,32 @@ const handleSave = () => {
 </option>
   </select>
 </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-900 mb-1">Jalon (Milestone)</label>
+            <select 
+              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+              v-model="localTask.milestone_id"
+            >
+              <option :value="null">Sélectionner un jalon</option>
+              <option v-for="m in milestones" :key="m.id" :value="m.id">
+                {{ m.title }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-900 mb-1">Poids / Effort</label>
+            <select 
+              class="w-full border border-gray-300 rounded-md px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+              v-model="localTask.weight"
+            >
+              <option :value="1">1 (Très facile)</option>
+              <option :value="3">3 (Moyen)</option>
+              <option :value="5">5 (Complexe)</option>
+              <option :value="8">8 (Très complexe)</option>
+            </select>
+          </div>
         </div>
 
         <!-- Ligne 3 : Description -->

@@ -58,7 +58,14 @@ const sortedEmployees = computed(() => {
 });
 
 // Timeline Control States - Defaulting to current week base
-const currentDateCursor = ref<string>('2026-07-06'); 
+const getTodayString = (): string => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = (today.getMonth() + 1).toString().padStart(2, '0');
+  const dd = today.getDate().toString().padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+const currentDateCursor = ref<string>(getTodayString()); 
 const daysViewWindow = ref<number>(7); 
 
 // Modal Assignment State
@@ -166,11 +173,7 @@ const shiftTimeline = (daysOffset: number): void => {
 };
 
 const setToday = (): void => {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = (today.getMonth() + 1).toString().padStart(2, '0');
-  const dd = today.getDate().toString().padStart(2, '0');
-  currentDateCursor.value = `${yyyy}-${mm}-${dd}`;
+  currentDateCursor.value = getTodayString();
 };
 
 watch([currentDateCursor, daysViewWindow], () => {

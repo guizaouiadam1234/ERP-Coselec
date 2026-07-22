@@ -359,7 +359,11 @@ const form = ref({
 
 async function submitEmployee() {
   try {
-    await api.post('/employees/', form.value);
+    const payload = {
+      ...form.value,
+      department_id: form.value.department_id ? Number(form.value.department_id) : null
+    };
+    await api.post('/employees/', payload);
     showCreateModal.value = false;
     // Reset form
     form.value = {

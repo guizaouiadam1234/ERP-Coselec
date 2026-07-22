@@ -16,10 +16,13 @@ router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
 #GET
 @router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)
-def get_tasks_by_project(project_id:int, db : Session=Depends(get_db), user_permissions=Depends(check_permission("tasks.read"))):
-    tasks = (db.query(Task).filter(Task.project_id==project_id).all())
+def get_tasks_by_project(project_id:int, milestone_id: int | None = None, db : Session=Depends(get_db), user_permissions=Depends(check_permission("tasks.read"))):
+    query = db.query(Task).filter(Task.project_id==project_id)
+    if milestone_id is not None:
+        query = query.filter(Task.milestone_id == milestone_id)
+    tasks = query.all()
     if len(tasks) ==0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune tâche n'a été retrouvée")
+        return []
     return tasks
 
 
@@ -71,6 +74,27 @@ def update_task(project_id: int, task_id: int, task_data: TaskUpdate, db: Sessio
         
     db.commit()
     db.refresh(task)
+
+    if task.milestone_id and task.status == TaskStatus.DONE:
+        from app.models.project.milestone import ProjectMilestone, MilestoneStatus
+        from datetime import date
+        milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == task.milestone_id).first()
+        if milestone and milestone.status != MilestoneStatus.ACHIEVED:
+            incomplete = db.query(Task).filter(
+                Task.milestone_id == task.milestone_id,
+                Task.status.notin_([TaskStatus.DONE, TaskStatus.ARCHIVED])
+            ).count()
+            if incomplete == 0:
+                milestone.status = MilestoneStatus.ACHIEVED
+                milestone.achieved_date = date.today()
+                next_milestone = db.query(ProjectMilestone).filter(
+                    ProjectMilestone.project_id == project_id,
+                    ProjectMilestone.order_index > milestone.order_index
+                ).order_by(ProjectMilestone.order_index).first()
+                if next_milestone:
+                    next_milestone.status = MilestoneStatus.ACTIVE
+                db.commit()
+
     return task
 
 

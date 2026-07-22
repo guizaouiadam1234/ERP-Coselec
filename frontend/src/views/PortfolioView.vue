@@ -6,6 +6,8 @@ import api from "@/services/api";
 const kpis = ref({
   total_projects: 0,
   ongoing_projects: 0,
+  completed_projects: 0,
+  pending_projects: 0,
   total_budget_allocated: 0,
   total_budget_consumed: 0,
   budget_consumption_rate: 0
@@ -73,7 +75,7 @@ const getConsumptionRate = (project: any) => {
 
       <template v-else>
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
             <p class="text-sm font-medium text-gray-500">Total Projets</p>
             <p class="text-3xl font-bold text-gray-900 mt-2">{{ kpis.total_projects }}</p>
@@ -83,8 +85,16 @@ const getConsumptionRate = (project: any) => {
             <p class="text-3xl font-bold text-blue-600 mt-2">{{ kpis.ongoing_projects }}</p>
           </div>
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
-            <p class="text-sm font-medium text-gray-500">Budget Total Alloué</p>
-            <p class="text-3xl font-bold text-gray-900 mt-2">{{ (kpis.total_budget_allocated / 1000000).toFixed(1) }}M XOF</p>
+            <p class="text-sm font-medium text-gray-500">Projets en attente</p>
+            <p class="text-3xl font-bold text-amber-500 mt-2">{{ kpis.pending_projects }}</p>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
+            <p class="text-sm font-medium text-gray-500">Projets terminés</p>
+            <p class="text-3xl font-bold text-green-600 mt-2">{{ kpis.completed_projects }}</p>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
+            <p class="text-sm font-medium text-gray-500">Budget Consommé</p>
+            <p class="text-3xl font-bold text-gray-900 mt-2">{{ (kpis.total_budget_consumed / 1000000).toFixed(1) }}M / {{ (kpis.total_budget_allocated / 1000000).toFixed(1) }}M</p>
           </div>
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
             <p class="text-sm font-medium text-gray-500">Taux de Consommation</p>

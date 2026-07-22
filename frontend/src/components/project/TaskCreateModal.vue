@@ -11,6 +11,11 @@ const props = defineProps<{
     first_name?: string;
     last_name?: string;
   }>;
+  milestones?: Array<{
+      id: number;
+      title: string;
+  }>;
+  defaultMilestoneId?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -26,6 +31,8 @@ const form = ref({
   assignee_id: '' as string | number,
   priority: 'Moyenne',
   status: 'A faire',
+  milestone_id: '' as string | number,
+  weight: 1,
 });
 
 const uploadedFiles = ref<File[]>([]);
@@ -57,6 +64,8 @@ const resetForm = () => {
     assignee_id: '',
     priority: 'Moyenne',
     status: 'A faire',
+    milestone_id: props.defaultMilestoneId || '',
+    weight: 1,
   };
   uploadedFiles.value = [];
   errors.value = [];
@@ -115,6 +124,8 @@ const submitTaskCreate = () => {
     due_date: form.value.due_date,
     start_date: form.value.start_date || null,
     assignee_id: form.value.assignee_id === '' ? null : Number(form.value.assignee_id),
+    milestone_id: form.value.milestone_id === '' ? null : Number(form.value.milestone_id),
+    weight: Number(form.value.weight),
   };
 
   emit('create', {
@@ -236,6 +247,33 @@ const submitTaskCreate = () => {
                 {{ getEmployeeLabel(emp) }}
               </option>
             </select>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-800">Jalon (Milestone)</label>
+              <select
+                v-model="form.milestone_id"
+                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-gray-900 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+              >
+                <option value="">Sélectionner un jalon</option>
+                <option v-for="m in milestones" :key="m.id" :value="m.id">
+                  {{ m.title }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-800">Poids / Effort</label>
+              <select
+                v-model="form.weight"
+                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-gray-900 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+              >
+                <option :value="1">1 (Très facile)</option>
+                <option :value="3">3 (Moyen)</option>
+                <option :value="5">5 (Complexe)</option>
+                <option :value="8">8 (Très complexe)</option>
+              </select>
+            </div>
           </div>
 
           <div>

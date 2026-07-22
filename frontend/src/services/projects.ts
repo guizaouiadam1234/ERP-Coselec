@@ -5,11 +5,16 @@ export const projectService = {
   getAllProjects: () => api.get('/projects/'),
   getProjectById: (projectId: number) => api.get(`/projects/${projectId}`),
   createProject: (data: any) => api.post('/projects/', data),
+  getProjectMilestones: (projectId: number) => api.get(`/projects/${projectId}/milestones`),
 };
 
 export const taskService = {
   // Gestion des tâches liées à un projet
-  getTasksByProject: (projectId: number) => api.get(`/projects/${projectId}/tasks`),
+  getTasksByProject: (projectId: number, milestoneId?: number) => {
+    let url = `/projects/${projectId}/tasks`;
+    if (milestoneId) url += `?milestone_id=${milestoneId}`;
+    return api.get(url);
+  },
   createTask: (projectId: number, data: any) => api.post(`/projects/${projectId}/tasks/`, data),
   
   // Gestion des tâches globales (déplacement ou modif transversale)

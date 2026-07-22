@@ -32,6 +32,7 @@
   v-if="isModalOpen" 
   :task="editingTask" 
   :employees="employees"
+  :milestones="milestones"
   @close="closeModal" 
   @save="saveTaskChanges" 
 />
@@ -48,6 +49,7 @@ const props = defineProps<{
   // Reçoit la liste globale pour alimenter les selects de la modale
   employeesList?: any[];
   projectsList?: any[];
+  milestonesList?: any[];
 }>();
 
 const emit = defineEmits<{
@@ -58,6 +60,7 @@ const emit = defineEmits<{
 // Listes pour alimenter les choix de l'utilisateur
 const employees = ref<any[]>(props.employeesList || []);
 const projects = ref<any[]>(props.projectsList || []);
+const milestones = ref<any[]>(props.milestonesList || []);
 
 const activeMenuId = ref<number | null>(null);
 const isModalOpen = ref(false);
@@ -107,6 +110,14 @@ watch(
   { immediate: true, deep: true }
 );
 
+watch(
+  () => props.milestonesList,
+  (newMilestones) => {
+    milestones.value = newMilestones || [];
+  },
+  { immediate: true, deep: true }
+);
+
 // Menu d'actions
 const toggleMenu = (taskId: number) => {
   activeMenuId.value = activeMenuId.value === taskId ? null : taskId;
@@ -149,7 +160,9 @@ const openEditModal = (task: any) => {
     start_date: task.start_date || task.date_debut || '',
     
     assignee_id: task.assignee_id || null,
-    project_id: task.project_id
+    project_id: task.project_id,
+    milestone_id: task.milestone_id || null,
+    weight: task.weight || 1
   };
   
   isModalOpen.value = true;

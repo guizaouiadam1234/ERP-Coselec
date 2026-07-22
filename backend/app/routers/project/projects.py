@@ -169,11 +169,19 @@ from datetime import date
 from collections import defaultdict
 from sqlalchemy.orm import joinedload
 
+from app.models.project.milestone import ProjectMilestone, MilestoneStatus
+from app.schemas.project.milestone import MilestoneResponse
+
+@router.get("/{project_id}/milestones", response_model=List[MilestoneResponse], status_code=status.HTTP_200_OK)
+def get_project_milestones(project_id: int, db: Session = Depends(get_db)):
+    milestones = db.query(ProjectMilestone).filter(ProjectMilestone.project_id == project_id).order_by(ProjectMilestone.order_index).all()
+    return milestones
+
 @router.get("/{project_id}/dashboard", status_code=status.HTTP_200_OK)
 def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
     project = db.query(Project).options(
         joinedload(Project.expenses),
-        joinedload(Project.phases),
+        joinedload(Project.milestones),
         joinedload(Project.budgets)
     ).filter(Project.id == project_id).first()
 
@@ -185,20 +193,22 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
     total_expenses = float(sum(e.amount for e in project.expenses)) if project.expenses else 0.0
     budget_consumed_percent = round((total_expenses / total_budget * 100), 2) if total_budget > 0 else 0.0
 
-    # 2. Phases Terminées
-    total_phases = len(project.phases)
-    completed_phases = len([p for p in project.phases if p.status == PhaseStatus.COMPLETED])
-    phases_str = f"{completed_phases}/{total_phases}"
+    # 2. Jalons Terminés
+    total_milestones = len(project.milestones)
+    completed_milestones = len([m for m in project.milestones if m.status == MilestoneStatus.ACHIEVED])
+    milestones_str = f"{completed_milestones}/{total_milestones}"
 
-    # 3. Jours Restants
-    today = date.today()
-    days_remaining = (project.date_fin_estimee - today).days if project.date_fin_estimee else 0
-    days_remaining = max(0, days_remaining) # Avoid negative if overdue
+    # 3. Progression Globale (Poids des tâches)
+    tasks = db.query(Task).filter(Task.project_id == project_id).all()
+    total_weight = sum(t.weight for t in tasks)
+    completed_weight = sum(t.weight for t in tasks if t.status == TaskStatus.DONE)
+    progression_percent = round((completed_weight / total_weight * 100), 2) if total_weight > 0 else 0.0
 
     # 4. Tâches Ouvertes
-    open_tasks = db.query(Task).filter(Task.project_id == project_id, Task.status != TaskStatus.DONE).count()
+    open_tasks = len([t for t in tasks if t.status != TaskStatus.DONE and t.status != TaskStatus.ARCHIVED])
 
     # 5. Financial Data
+    today = date.today()
     current_year = today.year
     expenses_this_year = [e for e in project.expenses if e.date_incurred and e.date_incurred.year == current_year]
     
@@ -215,9 +225,9 @@ def get_project_dashboard(project_id: int, db: Session = Depends(get_db)):
 
     return {
         "kpis": [
+            { "title": "Progression Globale", "value": f"{progression_percent}%", "color": "text-purple-600", "bg": "bg-purple-50" },
+            { "title": "Jalons Terminés", "value": milestones_str, "color": "text-green-600", "bg": "bg-green-50" },
             { "title": "Budget Consommé", "value": f"{budget_consumed_percent}%", "color": "text-blue-600", "bg": "bg-blue-50" },
-            { "title": "Phases Terminées", "value": phases_str, "color": "text-green-600", "bg": "bg-green-50" },
-            { "title": "Jours Restants", "value": str(days_remaining), "color": "text-amber-600", "bg": "bg-amber-50" },
             { "title": "Tâches Ouvertes", "value": str(open_tasks), "color": "text-red-600", "bg": "bg-red-50" },
         ],
         "financial_chart": {
