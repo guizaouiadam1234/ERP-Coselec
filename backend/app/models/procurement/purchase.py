@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Enum as SQLEnum, Text
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Date, ForeignKey, Enum as SQLEnum, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -39,7 +39,7 @@ class PurchaseOrder(Base):
     supplier_id = Column(Integer, ForeignKey("partners.id", ondelete="SET NULL"), nullable=True)
     
     status = Column(SQLEnum(PurchaseOrderStatus), default=PurchaseOrderStatus.DRAFT)
-    total_amount = Column(Float(12, 2), default=0.0)
+    total_amount = Column(Numeric(14, 2), default=0.0)
     pdf_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -55,7 +55,7 @@ class PurchaseOrderLine(Base):
     product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     
     quantity = Column(Integer, nullable=False, default=1)
-    unit_price = Column(Float(12, 2), nullable=False, default=0.0)
+    unit_price = Column(Numeric(14, 2), nullable=False, default=0.0)
 
     order = relationship("PurchaseOrder", back_populates="lines")
     product = relationship("Product")

@@ -1,12 +1,6 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex">
-    <Sidebar />
-
-    <div class="flex-1 flex flex-col">
-      <Navbar />
-
-      <main class="flex-1 p-8 overflow-y-auto">
-        <div class="max-w-5xl mx-auto space-y-8">
+  <AppLayout>
+    <div class="max-w-5xl mx-auto space-y-8 w-full">
           
           <div class="flex justify-between items-center">
             <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -173,16 +167,13 @@
             </div>
           </div>
           
-        </div>
-      </main>
     </div>
-  </div>
+  </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import Sidebar from '@/components/Sidebar.vue';
-import Navbar from '@/components/Navbar.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { api } from '@/services/api';
 import { useToast } from '@/composables/useToast';
 

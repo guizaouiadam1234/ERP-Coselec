@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Table, Float, ForeignKey, Boolean, Text, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Date, Table, Numeric, ForeignKey, Boolean, Text, Enum as SQLEnum
 import enum
 from sqlalchemy.orm import relationship
 from app.models.relations import project_partners
@@ -41,8 +41,8 @@ class Project(Base):
     date_fin_reelle= Column(Date, nullable=True)
 
     #champs de coûts
-    budget_estime = Column(Float(12,2), default=0.0, nullable=True)
-    budget_engage = Column(Float(12,2), default=0.0, nullable=True)
+    budget_estime = Column(Numeric(14, 2), default=0.0, nullable=True)
+    budget_engage = Column(Numeric(14, 2), default=0.0, nullable=True)
 
     #relationships
     partners = relationship(

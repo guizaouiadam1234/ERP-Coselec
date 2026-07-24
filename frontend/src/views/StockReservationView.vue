@@ -122,6 +122,28 @@ const consumeReservation = async (reservationId: number) => {
   }
 };
 
+const approveReservation = async (reservationId: number) => {
+  try {
+    await api.post(`/stock-reservations/${reservationId}/approve`);
+    toast.success("Réservation approuvée avec succès !");
+    await fetchData();
+  } catch (err: any) {
+    const msg = err.response?.data?.detail || "Erreur lors de l'approbation.";
+    toast.error(msg);
+  }
+};
+
+const rejectReservation = async (reservationId: number) => {
+  try {
+    await api.post(`/stock-reservations/${reservationId}/reject`);
+    toast.success("Réservation rejetée et stock restitué !");
+    await fetchData();
+  } catch (err: any) {
+    const msg = err.response?.data?.detail || "Erreur lors du rejet.";
+    toast.error(msg);
+  }
+};
+
 onMounted(() => {
   fetchData();
 });
@@ -208,19 +230,43 @@ onMounted(() => {
                 <td class="px-6 py-4 text-sm text-gray-500">{{ new Date(res.created_at).toLocaleDateString('fr-FR', { month: '2-digit', day: '2-digit' }) }}</td>
                 <td class="px-6 py-4 text-sm font-bold text-gray-700">{{ new Date(res.created_at).getFullYear() }}</td>
                 <td class="px-6 py-4">
-                  <span :class="{'bg-green-100 text-green-800': res.status === 'Approved' || res.status === 'Consumed', 'bg-yellow-100 text-yellow-800': res.status === 'Pending'}" class="px-2 py-1 text-xs font-semibold rounded-full">
+                  <span 
+                    :class="{
+                      'bg-green-100 text-green-800': res.status === 'Approved',
+                      'bg-blue-100 text-blue-800': res.status === 'Consumed',
+                      'bg-yellow-100 text-yellow-800': res.status === 'Pending',
+                      'bg-red-100 text-red-800': res.status === 'Cancelled'
+                    }" 
+                    class="px-2 py-1 text-xs font-semibold rounded-full"
+                  >
                     {{ res.status }}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm">
+                  <div v-if="res.status === 'Pending'" class="flex items-center gap-2">
+                    <button 
+                      @click="approveReservation(res.id)"
+                      class="text-green-600 hover:underline font-medium"
+                    >
+                      Approuver
+                    </button>
+                    <span class="text-gray-300">|</span>
+                    <button 
+                      @click="rejectReservation(res.id)"
+                      class="text-red-600 hover:underline font-medium"
+                    >
+                      Rejeter
+                    </button>
+                  </div>
                   <button 
-                    v-if="res.status !== 'Consumed'"
+                    v-else-if="res.status === 'Approved'"
                     @click="consumeReservation(res.id)"
                     class="text-blue-600 hover:underline font-medium"
                   >
                     Consommer
                   </button>
-                  <span v-else class="text-gray-400">Consommée</span>
+                  <span v-else-if="res.status === 'Consumed'" class="text-gray-400">Consommée</span>
+                  <span v-else-if="res.status === 'Cancelled'" class="text-red-400">Annulée</span>
                 </td>
               </tr>
               <tr v-if="sortedReservations.length === 0">

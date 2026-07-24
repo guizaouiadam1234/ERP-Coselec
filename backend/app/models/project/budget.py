@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -11,7 +11,7 @@ class ProjectBudget(Base):
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     
     category = Column(String(100), nullable=False)
-    allocated_amount = Column(Float(12, 2), default=0.0)
+    allocated_amount = Column(Numeric(14, 2), default=0.0)
     currency = Column(String(10), default="XOF")
     created_at = Column(DateTime, default=datetime.utcnow)
 

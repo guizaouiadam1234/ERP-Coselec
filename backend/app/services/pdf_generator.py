@@ -113,8 +113,22 @@ class CoselecPdfBuilder:
         self.elements.append(element)
         return self
 
+    def _add_footer(self, canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 8)
+        current_date = datetime.now().strftime('%d/%m/%Y %H:%M')
+        canvas.drawString(doc.leftMargin, 20, f"Généré le : {current_date}")
+        page_str = f"Page {doc.page}"
+        x_position = doc.pagesize[0] - doc.rightMargin
+        canvas.drawRightString(x_position, 20, page_str)
+        canvas.restoreState()
+
     def build_and_upload(self) -> str:
-        self.doc.build(self.elements)
+        self.doc.build(
+            self.elements, 
+            onFirstPage=self._add_footer, 
+            onLaterPages=self._add_footer
+        )
         self.buffer.seek(0)
         try:
             return upload_buffer_to_minio(self.buffer, self.filename)
@@ -190,7 +204,7 @@ def _build_dmcar_sig_table(request: FuelRequest) -> Table:
     return t_sig
 
 def generate_dmcar_pdf(request: FuelRequest) -> str:
-    filename = f"DMCAR_{request.id:04d}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    filename = f"fuel_requests/DMCAR_{request.id:04d}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
     builder = CoselecPdfBuilder(filename, topMargin=30, bottomMargin=30)
     
     builder.add_custom_element(_build_dmcar_table_data(request))
@@ -206,7 +220,7 @@ def generate_dmcar_pdf(request: FuelRequest) -> str:
 # -----------------------------------------
 
 def generate_caisse_pdf(data: dict) -> str:
-    filename = f"CAISSE_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    filename = f"caisse_vouchers/CAISSE_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
     builder = CoselecPdfBuilder(filename)
     
     builder.add_logo()
@@ -258,7 +272,7 @@ def generate_caisse_pdf(data: dict) -> str:
 
 def generate_leave_certificate(leave_request, employee) -> str:
     emp_name = f"{employee.first_name} {employee.last_name}" if hasattr(employee, 'first_name') else employee.name
-    filename = f"conge_{emp_name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    filename = f"leave_certificates/conge_{emp_name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d')}.pdf"
     
     builder = CoselecPdfBuilder(filename)
     builder.add_logo(space_after=30)
@@ -285,7 +299,7 @@ def generate_leave_certificate(leave_request, employee) -> str:
 # -----------------------------------------
 
 def generate_purchase_order_pdf(order) -> str:
-    filename = f"BC_{order.id:04d}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    filename = f"purchase_orders/BC_{order.id:04d}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
     builder = CoselecPdfBuilder(filename, title=f"Bon de Commande BC-{order.id}")
     
     builder.add_logo(space_after=20)
@@ -357,7 +371,7 @@ def generate_purchase_order_pdf(order) -> str:
 # -----------------------------------------
 
 def generate_project_report_pdf(project) -> str:
-    filename = f"Rapport_Projet_{project.code}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    filename = f"project_reports/Rapport_Projet_{project.code}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
     builder = CoselecPdfBuilder(filename)
     
     builder.add_logo(space_after=20)
@@ -412,4 +426,114 @@ def generate_project_report_pdf(project) -> str:
     builder.add_spacer(40)
     builder.add_paragraph(f"Rapport généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", alignment=2, font_size=8)
     
+    return builder.build_and_upload()
+
+# -----------------------------------------
+# BANK VOUCHER PDF GENERATOR
+# -----------------------------------------
+
+def generate_bank_voucher_pdf(voucher, allocations) -> str:
+    from reportlab.lib import colors
+    from reportlab.platypus import Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+    
+    filename = f"bank_vouchers/PB_{voucher.id:04d}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    builder = CoselecPdfBuilder(filename, title=f"Pièce de Banque N° {voucher.id}")
+    
+    builder.add_logo(space_after=10)
+    builder.add_title("PIECES DE BANQUE", font_size=18, space_after=20)
+    
+    info_data = [
+        ["Numéro d'ordre", str(voucher.id)],
+        ["Banque", voucher.bank_name],
+        ["Numéro chèque:", voucher.check_number],
+        ["Date", voucher.date.strftime('%d/%m/%Y')],
+        ["Libellé", voucher.description],
+        ["Num période", voucher.period_num],
+    ]
+    
+    builder.add_table(info_data, col_widths=[120, 390], highlight_header=False, style_commands=[
+        ('BOX', (0,0), (-1,-1), 0, colors.white),
+        ('INNERGRID', (0,0), (-1,-1), 0, colors.white),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOX', (1,0), (1,-1), 0.5, colors.lightgrey),
+        ('BACKGROUND', (1,0), (1,-1), colors.HexColor('#F8F9FA')),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+    ])
+    builder.add_spacer(10)
+    
+    yellow = colors.HexColor('#E5C765')
+    montant_str = f"{voucher.amount_in_numbers:,.0f}".replace(',', ' ')
+    
+    dest_p = Paragraph(f"<b><i>{voucher.recipient}</i></b>", builder.styles['Normal'])
+    montant_p = Paragraph(f"<b><i>{montant_str}</i></b>", builder.styles['Normal'])
+    lettres_p = Paragraph(f"<b><i>{voucher.amount_in_letters}</i></b>", builder.styles['Normal'])
+    
+    yellow_data = [
+        ["Destinataire", dest_p, "", ""],
+        ["Montant en chiffre:", montant_p, "Devise:", voucher.currency],
+        ["Montant en lettres:", lettres_p, "", ""]
+    ]
+    
+    builder.add_table(yellow_data, col_widths=[120, 150, 60, 180], highlight_header=False, style_commands=[
+        ('BOX', (0,0), (-1,-1), 0, colors.white), 
+        ('INNERGRID', (0,0), (-1,-1), 0, colors.white),
+        ('BACKGROUND', (1,0), (3,-1), yellow),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (2,1), (2,1), 'Helvetica-Bold'),
+        ('SPAN', (1,0), (3,0)),
+        ('SPAN', (1,2), (3,2)),
+        ('ALIGN', (1,1), (1,1), 'CENTER'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+    ])
+    builder.add_spacer(20)
+
+    header_alloc = Paragraph("<b>IMPUTATION ANALYTIQUE</b>", ParagraphStyle('AllocH', parent=builder.styles['Normal'], alignment=1, fontSize=9, textColor=colors.maroon))
+    builder.add_table([[header_alloc]], col_widths=[510], highlight_header=False, style_commands=[
+        ('BACKGROUND', (0,0), (0,0), colors.HexColor('#DFD3C3')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.black)
+    ])
+    
+    alloc_table_data = [
+        ["Code du centre", "désignation du centre", "client", "Compte analytique", "Montant"]
+    ]
+    for alloc in allocations:
+        # Check if alloc is a Pydantic model or SQLAlchemy model
+        code = getattr(alloc, 'cost_center_code', '')
+        name = getattr(alloc, 'cost_center_name', '')
+        client = getattr(alloc, 'client', '')
+        account = getattr(alloc, 'analytical_account', '')
+        amount = getattr(alloc, 'amount', 0)
+        
+        alloc_table_data.append([
+            code,
+            name,
+            client or "",
+            account,
+            f"{amount:,.0f}".replace(',', ' ')
+        ])
+        
+    builder.add_table(alloc_table_data, col_widths=[90, 140, 100, 110, 70], highlight_header=False, style_commands=[
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F4F4F4')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.lightgrey),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.lightgrey),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+    ])
+    
+    builder.add_spacer(40)
+    
+    builder.add_signatures([
+        "Visa réception\nde chèque", 
+        "Visa de Contrôle\nde gestion", 
+        "Visa DGA", 
+        "Visa DG"
+    ])
+
     return builder.build_and_upload()

@@ -73,6 +73,7 @@ from app.models.project.milestone import ProjectMilestone
 from app.models.project.budget import ProjectBudget
 from app.models.project.expense import ProjectExpense
 from app.models.hr.attendance import Attendance
+from app.models.bank_voucher import BankVoucher, AnalyticalAllocation
 
 from app.services.notification import create_notification
 from app.modules.users.services.rbac import (
@@ -105,6 +106,7 @@ app = FastAPI(lifespan=lifespan)
 
 from app.routers.caisse import router as caisse_router
 from app.routers.departments import router as departments_router
+from app.routers.bank_vouchers import router as bank_vouchers_router
 
 from app.routers.dashboard import router as app_dashboard_router
 
@@ -135,6 +137,7 @@ app.include_router(caisse_router)
 app.include_router(departments_router)
 app.include_router(users_router)
 app.include_router(generic_requests_router)
+app.include_router(bank_vouchers_router)
 
 
 raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "")
@@ -179,3 +182,5 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 @app.get("/")
 def root():
     return {"message": "Welcome to the ERP API!"}
+
+# Trigger reload

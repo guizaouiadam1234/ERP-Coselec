@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import or_, cast, String
+from sqlalchemy import or_
 from app.services.pdf_generator import generate_caisse_pdf
 from app.services.storage import get_file_url_from_minio
-from app.models.caisse_voucher import CaisseVoucher
+from app.models.caisse_voucher import CaisseVoucher, CaisseVoucherLine, CaisseVoucherLineType
 
 router = APIRouter(
     prefix="/caisse",
@@ -25,34 +25,53 @@ class CaisseRequest(BaseModel):
     cia: Optional[str] = ""
     depenses: List[CaisseRow] = []
     recettes: List[CaisseRow] = []
+    project_id: Optional[int] = None
+    expense_id: Optional[int] = None
+    reservation_id: Optional[int] = None
 
 class CaisseVoucherResponse(BaseModel):
     id: int
     num: Optional[str]
     affaire: Optional[str]
     cia: Optional[str]
-    depenses: List[CaisseRow]
-    recettes: List[CaisseRow]
     pdf_url: Optional[str]
     created_at: datetime
     
+    @computed_field
+    def depenses(self) -> List[CaisseRow]:
+        if not getattr(self, "lines", None):
+            return []
+        return [CaisseRow(date=str(l.date), designation=l.designation, montant=str(l.amount)) for l in self.lines if l.line_type.value == "EXPENSE"]
+
+    @computed_field
+    def recettes(self) -> List[CaisseRow]:
+        if not getattr(self, "lines", None):
+            return []
+        return [CaisseRow(date=str(l.date), designation=l.designation, montant=str(l.amount)) for l in self.lines if l.line_type.value == "RECEIPT"]
+
     model_config = ConfigDict(from_attributes=True)
 
 @router.get("/", response_model=List[CaisseVoucherResponse])
-def get_caisse_vouchers(search: Optional[str] = None, db: Session = Depends(get_db)):
+def get_caisse_vouchers(
+    search: Optional[str] = None, 
+    skip: int = Query(0, ge=0), 
+    limit: int = Query(100, ge=1, le=1000), 
+    db: Session = Depends(get_db)
+):
     query = db.query(CaisseVoucher)
     if search:
-        search_term = search.replace("PC-", "")
-        query = query.filter(
-            or_(
-                cast(CaisseVoucher.id, String).ilike(f"%{search_term}%"),
-                cast(CaisseVoucher.num, String).ilike(f"%{search}%"),
-                cast(CaisseVoucher.affaire, String).ilike(f"%{search}%"),
-                cast(CaisseVoucher.cia, String).ilike(f"%{search}%"),
-                cast(CaisseVoucher.created_at, String).ilike(f"%{search}%")
+        if search.isdigit():
+            query = query.filter(CaisseVoucher.id == int(search))
+        else:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    CaisseVoucher.num.ilike(search_term),
+                    CaisseVoucher.affaire.ilike(search_term),
+                    CaisseVoucher.cia.ilike(search_term)
+                )
             )
-        )
-    return query.order_by(CaisseVoucher.id.desc()).all()
+    return query.order_by(CaisseVoucher.id.desc()).offset(skip).limit(limit).all()
 
 @router.post("/generate")
 def generate_caisse(payload: CaisseRequest, db: Session = Depends(get_db)):
@@ -62,17 +81,70 @@ def generate_caisse(payload: CaisseRequest, db: Session = Depends(get_db)):
         
     pdf_url = get_file_url_from_minio(pdf_path)
     
-    # Persist to DB
     voucher = CaisseVoucher(
         num=payload.num,
         affaire=payload.affaire,
         cia=payload.cia,
-        depenses=[row.dict() for row in payload.depenses],
-        recettes=[row.dict() for row in payload.recettes],
-        pdf_url=pdf_url
+        pdf_url=pdf_url,
+        project_id=payload.project_id,
+        expense_id=payload.expense_id,
+        reservation_id=payload.reservation_id
     )
     db.add(voucher)
+    db.flush()
+    
+    for row in payload.depenses:
+        line = CaisseVoucherLine(
+            voucher_id=voucher.id,
+            line_type=CaisseVoucherLineType.EXPENSE,
+            date=row.date,
+            designation=row.designation,
+            amount=float(row.montant) if row.montant else 0.0
+        )
+        db.add(line)
+        
+    for row in payload.recettes:
+        line = CaisseVoucherLine(
+            voucher_id=voucher.id,
+            line_type=CaisseVoucherLineType.RECEIPT,
+            date=row.date,
+            designation=row.designation,
+            amount=float(row.montant) if row.montant else 0.0
+        )
+        db.add(line)
+        
     db.commit()
     db.refresh(voucher)
     
     return {"pdf_url": pdf_url, "voucher_id": voucher.id}
+
+@router.post("/{voucher_id}/finalize")
+def finalize_caisse(voucher_id: int, db: Session = Depends(get_db)):
+    from app.models.caisse_voucher import VoucherStatus
+    voucher = db.query(CaisseVoucher).filter(CaisseVoucher.id == voucher_id).first()
+    if not voucher:
+        return {"error": "Voucher not found"}
+        
+    if voucher.status != VoucherStatus.DRAFT:
+        return {"error": "Only DRAFT vouchers can be finalized"}
+        
+    voucher.status = VoucherStatus.FINALIZED
+    voucher.finalized_at = datetime.utcnow()
+    db.commit()
+    db.refresh(voucher)
+    return {"status": voucher.status, "finalized_at": voucher.finalized_at}
+
+@router.post("/{voucher_id}/void")
+def void_caisse(voucher_id: int, db: Session = Depends(get_db)):
+    from app.models.caisse_voucher import VoucherStatus
+    voucher = db.query(CaisseVoucher).filter(CaisseVoucher.id == voucher_id).first()
+    if not voucher:
+        return {"error": "Voucher not found"}
+        
+    if voucher.status == VoucherStatus.VOID:
+        return {"error": "Voucher is already voided"}
+        
+    voucher.status = VoucherStatus.VOID
+    db.commit()
+    db.refresh(voucher)
+    return {"status": voucher.status}

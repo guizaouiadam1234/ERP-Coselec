@@ -10,7 +10,7 @@ class ProjectBase(BaseModel):
     date_debut_estimee: date
     date_fin_estimee: date
     date_fin_prevue: date
-    budget_estime: Optional[float] = 0.0
+    budget_estime: Optional[float] = Field(default=0.0, ge=0)
 
 class ProjectCreate(ProjectBase):
     status: Optional[ProjectStatus] = ProjectStatus.STUDY
@@ -20,7 +20,7 @@ class ProjectResponse(ProjectBase):
     status: ProjectStatus = ProjectStatus.STUDY
     date_debut_reelle: Optional[date] = None
     date_fin_reelle: Optional[date] = None
-    budget_engage: Optional[float] = 0.0
+    budget_engage: Optional[float] = Field(default=0.0, ge=0)
     
     partners: List[PartnerResponse] = Field(default_factory=list)
 

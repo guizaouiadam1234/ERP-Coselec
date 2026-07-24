@@ -164,6 +164,13 @@ onMounted(async () => {
           label="Pièce de Caisse"
           :collapsed="collapsed"
         />
+        
+        <SidebarItem
+          to="/bank-voucher"
+          icon="account_balance"
+          label="Pièce de Banque"
+          :collapsed="collapsed"
+        />
       </div>
 
 

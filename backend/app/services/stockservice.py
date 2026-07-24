@@ -64,6 +64,7 @@ def get_or_create_stock(
 ):
     stock = (
         db.query(Stock)
+        .with_for_update()
         .filter(
             Stock.product_id == product_id,
             Stock.warehouse_id == warehouse_id,

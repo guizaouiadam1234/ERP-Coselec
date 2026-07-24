@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.models.procurement.purchase import PurchaseRequest, PurchaseOrder, PurchaseOrderLine
 from app.services.pdf_generator import generate_purchase_order_pdf
 from app.services.storage import get_file_url_from_minio
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import date, datetime
 from typing import List, Optional
 from sqlalchemy import or_, cast, String
@@ -25,8 +25,8 @@ class PurchaseRequestResponse(PurchaseRequestCreate):
 
 class PurchaseOrderLineCreate(BaseModel):
     product_id: int
-    quantity: int
-    unit_price: float
+    quantity: int = Field(..., gt=0)
+    unit_price: float = Field(..., ge=0)
 
 class PurchaseOrderCreate(BaseModel):
     purchase_request_id: int | None = None

@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Date, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -16,7 +16,7 @@ class ProjectExpense(Base):
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     budget_id = Column(Integer, ForeignKey("project_budgets.id", ondelete="SET NULL"), nullable=True)
     
-    amount = Column(Float(12, 2), nullable=False)
+    amount = Column(Numeric(14, 2), nullable=False)
     date_incurred = Column(Date, nullable=False)
     description = Column(String(500), nullable=True)
     status = Column(SQLEnum(ExpenseStatus), default=ExpenseStatus.PENDING)

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db
 from app.models.project.budget import ProjectBudget
-from app.models.project.expense import ProjectExpense
-from pydantic import BaseModel, ConfigDict, computed_field
+from app.models.project.expense import ProjectExpense, ExpenseStatus
+from pydantic import BaseModel, ConfigDict, computed_field, Field
 from datetime import datetime, date
 from typing import List
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/projects/{project_id}/budgets", tags=["Project Budge
 
 class BudgetCreate(BaseModel):
     category: str
-    allocated_amount: float
+    allocated_amount: float = Field(..., gt=0)
     currency: str = "XOF"
 
 class BudgetResponse(BudgetCreate):
@@ -25,7 +25,7 @@ class BudgetResponse(BudgetCreate):
 
 class ExpenseCreate(BaseModel):
     budget_id: int | None = None
-    amount: float
+    amount: float = Field(..., gt=0)
     date_incurred: date
     description: str | None = None
 
@@ -37,11 +37,16 @@ class ExpenseResponse(ExpenseCreate):
     model_config = ConfigDict(from_attributes=True)
 
 class ExpenseUpdate(BaseModel):
-    status: str
+    status: ExpenseStatus
 
 @router.get("/", response_model=List[BudgetResponse])
-def get_budgets(project_id: int, db: Session = Depends(get_db)):
-    return db.query(ProjectBudget).options(joinedload(ProjectBudget.expenses)).filter(ProjectBudget.project_id == project_id).all()
+def get_budgets(
+    project_id: int, 
+    skip: int = Query(0, ge=0), 
+    limit: int = Query(100, ge=1, le=1000), 
+    db: Session = Depends(get_db)
+):
+    return db.query(ProjectBudget).options(joinedload(ProjectBudget.expenses)).filter(ProjectBudget.project_id == project_id).offset(skip).limit(limit).all()
 
 @router.post("/", response_model=BudgetResponse)
 def create_budget(project_id: int, budget: BudgetCreate, db: Session = Depends(get_db)):
@@ -57,13 +62,18 @@ def create_budget(project_id: int, budget: BudgetCreate, db: Session = Depends(g
     return db_budget
 
 @router.get("/expenses", response_model=List[ExpenseResponse])
-def get_expenses(project_id: int, db: Session = Depends(get_db)):
-    return db.query(ProjectExpense).filter(ProjectExpense.project_id == project_id).all()
+def get_expenses(
+    project_id: int, 
+    skip: int = Query(0, ge=0), 
+    limit: int = Query(100, ge=1, le=1000), 
+    db: Session = Depends(get_db)
+):
+    return db.query(ProjectExpense).filter(ProjectExpense.project_id == project_id).offset(skip).limit(limit).all()
 
 @router.post("/expenses", response_model=ExpenseResponse)
 def add_expense(project_id: int, expense: ExpenseCreate, db: Session = Depends(get_db)):
     if expense.budget_id:
-        budget = db.query(ProjectBudget).filter(ProjectBudget.id == expense.budget_id, ProjectBudget.project_id == project_id).first()
+        budget = db.query(ProjectBudget).with_for_update().filter(ProjectBudget.id == expense.budget_id, ProjectBudget.project_id == project_id).first()
         if not budget:
             raise HTTPException(status_code=404, detail="Budget not found for this project")
         if expense.amount > budget.remaining_amount:
@@ -86,6 +96,9 @@ def update_expense_status(project_id: int, expense_id: int, update_data: Expense
     db_expense = db.query(ProjectExpense).filter(ProjectExpense.id == expense_id, ProjectExpense.project_id == project_id).first()
     if not db_expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+    
+    if db_expense.status != ExpenseStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Only pending expenses can be updated")
     
     db_expense.status = update_data.status
     db.commit()

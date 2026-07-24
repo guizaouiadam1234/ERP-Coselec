@@ -78,6 +78,12 @@ const routes = [
     name: "caisse",
     component: () => import("../views/CaisseView.vue"),
     meta: { requiredRoles: ["Admin", "Finance", "Direction"] }
+  },
+  {
+    path: "/bank-voucher",
+    name: "bank-voucher",
+    component: () => import("../views/BankVoucherView.vue"),
+    meta: { requiredRoles: ["Admin", "Finance", "Direction"] }
   }
   ,
   {
