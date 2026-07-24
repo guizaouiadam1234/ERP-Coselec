@@ -36,6 +36,7 @@ class CaisseVoucher(Base):
     reservation = relationship("ProjectStockReservation")
     
     lines = relationship("CaisseVoucherLine", back_populates="voucher", cascade="all, delete-orphan")
+    attachments = relationship("VoucherAttachment", cascade="all, delete-orphan")
 
 class CaisseVoucherLine(Base):
     __tablename__ = "caisse_voucher_lines"

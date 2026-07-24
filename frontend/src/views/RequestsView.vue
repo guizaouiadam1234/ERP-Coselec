@@ -61,21 +61,10 @@
   </AppLayout>
 </template>
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppLayout from '@/layouts/AppLayout.vue';
-
-type RequestStatus = 'Nouveau' | 'En cours' | 'Bloqué' | 'Terminé';
-
-type RequestItem = {
-  id: number;
-  code: string;
-  title: string;
-  description: string;
-  status: RequestStatus;
-  statusClass: string;
-  owner: string;
-  updatedAt: string;
-};
+import api from '@/services/api';
 
 type RequestSection = {
   key: 'hr' | 'it' | 'facilities';
@@ -84,10 +73,10 @@ type RequestSection = {
   description: string;
   icon: string;
   badgeClass: string;
-  requests: RequestItem[];
+  requests: any[];
 };
 
-const requestSections: RequestSection[] = [
+const requestSections = ref<RequestSection[]>([
   {
     key: 'hr',
     eyebrow: 'Section 01',
@@ -95,28 +84,7 @@ const requestSections: RequestSection[] = [
     description: 'Demandes de congés, onboarding, contrat et informations collaborateur.',
     icon: 'groups',
     badgeClass: 'bg-gradient-to-br from-red-600 to-red-700 shadow-lg shadow-red-200',
-    requests: [
-      {
-        id: 101,
-        code: 'HR-101',
-        title: 'Validation congé annuel',
-        description: 'Demande de congé à valider pour le collaborateur du pôle chantier.',
-        status: 'En cours',
-        statusClass: 'bg-amber-50 text-amber-700 ring-1 ring-amber-100',
-        owner: 'S. Diop',
-        updatedAt: 'Il y a 2h'
-      },
-      {
-        id: 102,
-        code: 'HR-102',
-        title: 'Contrat nouveau recrutement',
-        description: 'Préparation du contrat et des documents d’entrée pour un nouvel employé.',
-        status: 'Nouveau',
-        statusClass: 'bg-red-50 text-red-700 ring-1 ring-red-100',
-        owner: 'A. Fall',
-        updatedAt: 'Aujourd’hui'
-      }
-    ]
+    requests: []
   },
   {
     key: 'it',
@@ -125,28 +93,7 @@ const requestSections: RequestSection[] = [
     description: 'Tickets liés aux accès, équipements, bugs applicatifs et support utilisateur.',
     icon: 'memory',
     badgeClass: 'bg-gradient-to-br from-[#97091f] to-[#d10f2f] shadow-lg shadow-red-200',
-    requests: [
-      {
-        id: 201,
-        code: 'IT-201',
-        title: 'Accès VPN pour équipe terrain',
-        description: 'Ouverture d’accès sécurisé pour les utilisateurs mobiles sur chantier.',
-        status: 'Bloqué',
-        statusClass: 'bg-gray-100 text-gray-700 ring-1 ring-gray-200',
-        owner: 'M. Traoré',
-        updatedAt: 'Il y a 45 min'
-      },
-      {
-        id: 202,
-        code: 'IT-202',
-        title: 'Poste de travail à remplacer',
-        description: 'Demande de remplacement d’un ordinateur lent et instable.',
-        status: 'En cours',
-        statusClass: 'bg-amber-50 text-amber-700 ring-1 ring-amber-100',
-        owner: 'I. Ba',
-        updatedAt: 'Hier'
-      }
-    ]
+    requests: []
   },
   {
     key: 'facilities',
@@ -155,28 +102,25 @@ const requestSections: RequestSection[] = [
     description: 'Maintenance, locaux, badge, salles de réunion et demandes logistiques.',
     icon: 'home_repair_service',
     badgeClass: 'bg-gradient-to-br from-gray-800 to-red-700 shadow-lg shadow-red-200',
-    requests: [
-      {
-        id: 301,
-        code: 'FAC-301',
-        title: 'Climatisation salle projet',
-        description: 'Maintenance urgente pour une climatisation défaillante dans la salle projet.',
-        status: 'Nouveau',
-        statusClass: 'bg-red-50 text-red-700 ring-1 ring-red-100',
-        owner: 'K. Ndiaye',
-        updatedAt: 'À l’instant'
-      },
-      {
-        id: 302,
-        code: 'FAC-302',
-        title: 'Badge d’accès réception',
-        description: 'Création et attribution d’un badge pour un nouveau membre de l’équipe.',
-        status: 'Terminé',
-        statusClass: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100',
-        owner: 'R. Cissé',
-        updatedAt: 'Avant-hier'
-      }
-    ]
+    requests: []
   }
-];
+]);
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/requests/');
+    const allRequests = res.data || [];
+    
+    // Distribute into categories
+    const hr = allRequests.filter((r: any) => ['LEAVE', 'DOCUMENT'].includes(r.type));
+    const it = allRequests.filter((r: any) => r.type && r.type.startsWith('IT_'));
+    const facilities = allRequests.filter((r: any) => r.type && r.type.startsWith('FACILITY_'));
+    
+    requestSections.value[0].requests = hr;
+    requestSections.value[1].requests = it;
+    requestSections.value[2].requests = facilities;
+  } catch (error) {
+    console.error("Error fetching requests:", error);
+  }
+});
 </script>

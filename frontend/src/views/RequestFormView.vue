@@ -220,22 +220,36 @@ const submitRequest = async () => {
 
   try {
     if (props.section === 'it') {
-      await api.post('/it-requests/', {
-        title: form.subject,
-        description: form.description
+      await api.post('/requests/', {
+        type: 'IT_INCIDENT',
+        priority: form.priority === 'Normal' ? 'NORMAL' : 'HIGH',
+        description: form.description,
+        payload: {
+          type: 'IT_INCIDENT',
+          affected_system: form.subject,
+          error_message: form.description,
+          impact_level: 'medium'
+        }
       });
     } else if (props.section === 'facilities') {
-      await api.post('/facility-requests/', {
-        title: form.subject,
+      await api.post('/requests/', {
+        type: 'FACILITY_MAINTENANCE',
+        priority: form.priority === 'Normal' ? 'NORMAL' : 'HIGH',
         description: form.description,
-        request_type: 'Maintenance'
+        payload: {
+          type: 'FACILITY_MAINTENANCE',
+          location: form.subject,
+          urgency: 'routine',
+          description: form.description
+        }
       });
     } else if (props.section === 'hr') {
       await api.post('/requests/', {
         type: 'LEAVE',
         description: form.description,
         payload: {
-          employee_id: form.employee_id,
+          type: 'LEAVE',
+          employee_id: form.employee_id || undefined,
           start_date: form.start_date,
           end_date: form.end_date,
           leave_type: form.leave_type,

@@ -8,6 +8,10 @@ from sqlalchemy import or_
 from app.services.pdf_generator import generate_caisse_pdf
 from app.services.storage import get_file_url_from_minio
 from app.models.caisse_voucher import CaisseVoucher, CaisseVoucherLine, CaisseVoucherLineType
+from app.models.voucher_attachment import VoucherAttachment
+from fastapi import UploadFile, File, HTTPException
+import uuid
+from app.services.storage import upload_file_to_minio
 
 router = APIRouter(
     prefix="/caisse",
@@ -148,3 +152,49 @@ def void_caisse(voucher_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(voucher)
     return {"status": voucher.status}
+
+@router.post("/{voucher_id}/attachments")
+def upload_caisse_attachment(
+    voucher_id: int, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db)
+):
+    voucher = db.query(CaisseVoucher).filter(CaisseVoucher.id == voucher_id).first()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Caisse Voucher not found")
+        
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+    filename = f"orders/caisse_{voucher_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    
+    try:
+        storage_path = upload_file_to_minio(file, filename)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        
+    attachment = VoucherAttachment(
+        caisse_voucher_id=voucher_id,
+        file_name=file.filename,
+        storage_path=storage_path,
+        mime_type=file.content_type
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    
+    url = get_file_url_from_minio(attachment.storage_path)
+    return {"id": attachment.id, "file_name": attachment.file_name, "url": url}
+
+@router.get("/{voucher_id}/attachments")
+def get_caisse_attachments(voucher_id: int, db: Session = Depends(get_db)):
+    attachments = db.query(VoucherAttachment).filter(VoucherAttachment.caisse_voucher_id == voucher_id).all()
+    results = []
+    for att in attachments:
+        url = get_file_url_from_minio(att.storage_path)
+        results.append({
+            "id": att.id,
+            "file_name": att.file_name,
+            "mime_type": att.mime_type,
+            "url": url,
+            "created_at": att.created_at
+        })
+    return results

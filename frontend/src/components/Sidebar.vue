@@ -35,6 +35,11 @@ const canViewStock = computed(() => {
 const canViewDocuments = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "Direction", "Finance"]);
 });
+
+const canViewTreasury = computed(() => {
+  return hasAnyRole(roles.value, ["Admin", "Direction", "Finance", "Comptabilité"]);
+});
+
 const canViewProjects = computed(() => {
   return hasAnyRole(roles.value, ["Admin", "Responsable Projet", "Direction"]);
 });
@@ -158,6 +163,17 @@ onMounted(async () => {
           label="Demandes Carburant"
           :collapsed="collapsed"
         />
+      </div>
+
+      <!-- Trésorerie -->
+      <div v-if="canViewTreasury">
+        <h2
+          v-if="!collapsed"
+          class="text-xs uppercase text-red-200 mb-2"
+        >
+          Trésorerie
+        </h2>
+
         <SidebarItem
           to="/caisse"
           icon="receipt_long"

@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
+from app.core.security.auth import check_permission
+from app.modules.users.models.user import User
 from app.models.procurement.purchase import PurchaseRequest, PurchaseOrder, PurchaseOrderLine
 from app.services.pdf_generator import generate_purchase_order_pdf
 from app.services.storage import get_file_url_from_minio
@@ -41,11 +43,18 @@ class PurchaseOrderResponse(PurchaseOrderCreate):
     model_config = ConfigDict(from_attributes=True)
 
 @router.get("/requests/", response_model=List[PurchaseRequestResponse])
-def get_purchase_requests(db: Session = Depends(get_db)):
+def get_purchase_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("stock.read")),
+):
     return db.query(PurchaseRequest).all()
 
 @router.post("/requests/", response_model=PurchaseRequestResponse)
-def create_purchase_request(req: PurchaseRequestCreate, db: Session = Depends(get_db)):
+def create_purchase_request(
+    req: PurchaseRequestCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("stock.create")),
+):
     db_req = PurchaseRequest(
         project_id=req.project_id,
         requester_id=req.requester_id,
@@ -62,7 +71,11 @@ def create_purchase_request(req: PurchaseRequestCreate, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Invalid project_id or requester_id")
 
 @router.get("/orders/", response_model=List[PurchaseOrderResponse])
-def get_purchase_orders(search: Optional[str] = None, db: Session = Depends(get_db)):
+def get_purchase_orders(
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("stock.read")),
+):
     query = db.query(PurchaseOrder)
     if search:
         search_term_bc = search.replace("BC-", "")
@@ -77,7 +90,11 @@ def get_purchase_orders(search: Optional[str] = None, db: Session = Depends(get_
     return query.all()
 
 @router.post("/orders/", response_model=PurchaseOrderResponse)
-def create_purchase_order(order: PurchaseOrderCreate, db: Session = Depends(get_db)):
+def create_purchase_order(
+    order: PurchaseOrderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("stock.create")),
+):
     db_order = PurchaseOrder(
         purchase_request_id=order.purchase_request_id,
         supplier_id=order.supplier_id,
@@ -108,7 +125,11 @@ def create_purchase_order(order: PurchaseOrderCreate, db: Session = Depends(get_
         raise HTTPException(status_code=400, detail="Invalid request_id, supplier_id or product_id")
 
 @router.get("/orders/{order_id}/download-pdf/")
-def download_order_pdf(order_id: int, db: Session = Depends(get_db)):
+def download_order_pdf(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("stock.read")),
+):
     db_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")

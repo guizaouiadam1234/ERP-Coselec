@@ -45,7 +45,10 @@ RBAC_PERMISSIONS: dict[str, tuple[str, str]] = {
     "fuel_requests.update": ("Fuel - mise a jour", "Modifier des requêtes de carburant"),
     "fuel_requests.delete": ("Fuel - suppression", "Supprimer des requêtes de carburant"),
     "fuel_requests.validate_finance": ("Fuel - valider finance", "Valider financièrement les requêtes de carburant"),
-    "requests.validate_hr": ("Demandes - valider RH", "Valider les demandes RH unifiées")
+    "requests.validate_hr": ("Demandes - valider RH", "Valider les demandes RH unifiées"),
+    "requests.validate_it": ("Demandes - valider IT", "Valider les demandes IT"),
+    "requests.validate_facility": ("Demandes - valider Facility", "Valider les demandes Moyens Généraux"),
+    "requests.validate_finance": ("Demandes - valider Finance", "Valider financièrement les demandes unifiées"),
 }
 
 
@@ -134,6 +137,7 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
         "description": "Maintenance et interventions",
         "permissions": {
             "stock.read",
+            "requests.validate_facility",
             "notifications.read",
             "notifications.update",
         },
@@ -157,6 +161,30 @@ RBAC_ROLES: dict[str, dict[str, Iterable[str]]] = {
             "fuel_requests.update",
             "fuel_requests.delete",
             "fuel_requests.validate_finance",
+            "requests.validate_finance",
+        },
+    },
+    "IT Admin": {
+        "description": "Administration IT et support technique",
+        "permissions": {
+            "requests.validate_it",
+            "stock.read",
+            "stock.update",
+            "notifications.read",
+            "notifications.update",
+        },
+    },
+    "Facility Manager": {
+        "description": "Gestion Moyens Généraux et interventions",
+        "permissions": {
+            "requests.validate_facility",
+            "stock.read",
+            "stock.update",
+            "fuel_requests.read",
+            "fuel_requests.update",
+            "notifications.read",
+            "notifications.update",
+            "dashboard.read",
         },
     },
 }
@@ -239,7 +267,15 @@ def assign_default_role(db: Session, user: User) -> None:
         assign_role_to_user(db, user, "Employe")
 
 
+ADMIN_BOOTSTRAP_PASSWORD = os.getenv("ADMIN_BOOTSTRAP_PASSWORD", "").strip()
+
+
 def ensure_admin_role_for_email(db: Session, email: str | None = None) -> None:
+    import logging
+    import secrets
+
+    logger = logging.getLogger(__name__)
+
     target_email = (email or ADMIN_BOOTSTRAP_EMAIL).strip().lower()
     if not target_email:
         return
@@ -247,12 +283,21 @@ def ensure_admin_role_for_email(db: Session, email: str | None = None) -> None:
     user = db.query(User).filter(User.email == target_email).first()
     if not user:
         from app.core.security.auth import hash_password
+
+        # Use env-provided password or generate a secure random one
+        password = ADMIN_BOOTSTRAP_PASSWORD or secrets.token_urlsafe(16)
+        if not ADMIN_BOOTSTRAP_PASSWORD:
+            logger.warning(
+                "ADMIN_BOOTSTRAP_PASSWORD not set. Generated temporary password "
+                "for %s: %s  — change it immediately!", target_email, password,
+            )
+
         user = User(
             name="Admin Bootstrap",
             email=target_email,
-            hashed_password=hash_password("admin123"),
+            hashed_password=hash_password(password),
             is_active=True,
-            requires_password_change=False
+            requires_password_change=True,
         )
         db.add(user)
         db.commit()

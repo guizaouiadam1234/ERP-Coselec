@@ -22,9 +22,9 @@
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- ID (Visuel) -->
+            <!-- ID (Visuel) renommé en Numéro d'ordre -->
             <div>
-              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ID Pièce de Banque</label>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Numéro d'ordre</label>
               <input :value="form.id || 'Chargement...'" type="text" disabled class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl cursor-not-allowed font-bold" />
             </div>
             
@@ -58,6 +58,65 @@
             <div class="lg:col-span-4">
               <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Libellé de la dépense *</label>
               <input v-model="form.description" type="text" required class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#d10f2f]/20 focus:border-[#d10f2f] transition-all" placeholder="Ex: AVANCE 50% / DEPLACEMENT COMASEL" />
+            </div>
+
+            <div class="lg:col-span-4">
+              <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Lier à des pièces de caisse (Optionnel)</label>
+              
+              <!-- Custom Multi-Select -->
+              <div class="relative">
+                <div 
+                  @click="isDropdownOpen = !isDropdownOpen" 
+                  class="w-full min-h-[46px] px-4 py-2 bg-white border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-[#d10f2f]/20 focus-within:border-[#d10f2f] transition-all cursor-pointer flex flex-wrap gap-2 items-center"
+                >
+                  <div v-if="form.linked_caisse_voucher_ids.length === 0" class="text-gray-400">
+                    Sélectionner des pièces de caisse...
+                  </div>
+                  
+                  <span 
+                    v-for="id in form.linked_caisse_voucher_ids" 
+                    :key="id"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#fff5f6] text-[#d10f2f] text-sm font-semibold border border-[#ffe0e4]"
+                  >
+                    PC-{{ id }}
+                    <span @click.stop="toggleCaisseSelection(id)" class="material-symbols-outlined text-[14px] cursor-pointer hover:text-red-800">close</span>
+                  </span>
+                  
+                  <span class="material-symbols-outlined ml-auto text-gray-400 transition-transform" :class="{'rotate-180': isDropdownOpen}">expand_more</span>
+                </div>
+
+                <!-- Invisible overlay to detect outside clicks -->
+                <div v-if="isDropdownOpen" class="fixed inset-0 z-10" @click="isDropdownOpen = false"></div>
+
+                <!-- Dropdown Menu -->
+                <div 
+                  v-if="isDropdownOpen" 
+                  class="absolute z-20 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-60 overflow-y-auto"
+                >
+                  <div 
+                    v-for="caisse in availableCaisseVouchers" 
+                    :key="caisse.id"
+                    @click="toggleCaisseSelection(caisse.id)"
+                    class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                  >
+                    <div 
+                      class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+                      :class="form.linked_caisse_voucher_ids.includes(caisse.id) ? 'bg-[#d10f2f] border-[#d10f2f]' : 'border-gray-300 bg-white'"
+                    >
+                      <span v-if="form.linked_caisse_voucher_ids.includes(caisse.id)" class="material-symbols-outlined text-white text-[14px]">check</span>
+                    </div>
+                    <div>
+                      <div class="font-bold text-gray-900">PC-{{ caisse.id }} <span class="text-gray-400 font-normal">| Num: {{ caisse.num || '-' }}</span></div>
+                      <div class="text-xs text-gray-500">Affaire: {{ caisse.affaire || '-' }} | Montant: {{ caisse.total_amount || '0' }} {{ form.currency }}</div>
+                    </div>
+                  </div>
+                  
+                  <div v-if="availableCaisseVouchers.length === 0" class="px-4 py-8 text-center text-gray-500 text-sm">
+                    Aucune pièce de caisse validée disponible.
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Permet de regrouper les documents d'un même ordre.</p>
             </div>
           </div>
         </div>
@@ -174,14 +233,117 @@
           </button>
         </div>
       </form>
+    <!-- History Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+      <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-gray-500">history</span>
+          <h3 class="text-lg font-bold text-gray-900">Historique des Pièces de Banque</h3>
+        </div>
+        
+        <div class="relative w-64">
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Rechercher (Num, Banque...)" 
+            class="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#d10f2f]/20 focus:border-[#d10f2f] text-sm transition-all"
+            @input="fetchHistory"
+          />
+          <span class="material-symbols-outlined absolute left-3 top-2 text-gray-400 text-[18px]">search</span>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-gray-50 text-gray-600 border-b border-gray-100">
+            <tr>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('id')">
+                Numéro d'ordre
+                <span v-if="sortColumn === 'id'" class="material-symbols-outlined text-[14px] align-middle">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
+              </th>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider">Banque & Chèque</th>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider">Bénéficiaire</th>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider">Montant</th>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider">Pièces de Caisse</th>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider">Date</th>
+              <th class="px-6 py-4 font-bold uppercase text-xs tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="item in sortedHistory" :key="item.id" class="hover:bg-gray-50/50 transition-colors">
+              <td class="px-6 py-4 font-bold text-gray-900">PB-{{ item.id }}</td>
+              <td class="px-6 py-4">
+                <div class="font-bold text-gray-900">{{ item.bank_name }}</div>
+                <div class="text-xs text-gray-500">Chèque: {{ item.check_number }}</div>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-700 font-medium">{{ item.recipient }}</td>
+              <td class="px-6 py-4 text-sm font-bold text-[#d10f2f]">{{ item.amount_in_numbers.toLocaleString() }} {{ item.currency }}</td>
+              <td class="px-6 py-4">
+                <div v-if="item.linked_caisse_voucher_ids && item.linked_caisse_voucher_ids.length > 0" class="flex flex-wrap gap-1">
+                  <span 
+                    v-for="cId in item.linked_caisse_voucher_ids" 
+                    :key="cId"
+                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[#fff5f6] text-[#d10f2f] border border-[#ffe0e4]"
+                  >
+                    PC-{{ cId }}
+                  </span>
+                </div>
+                <span v-else class="text-gray-400 text-xs italic">-</span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-500">{{ new Date(item.created_at || item.date).toLocaleDateString('fr-FR') }}</td>
+              <td class="px-6 py-4 text-sm flex gap-3">
+                <a v-if="item.pdf_url" :href="item.pdf_url" target="_blank" class="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 font-medium">
+                  <span class="material-symbols-outlined text-[18px]">download</span> PDF
+                </a>
+                <button @click="openAttachments(item.id)" class="text-red-600 hover:text-red-900 flex items-center gap-1 font-medium">
+                  <span class="material-symbols-outlined text-[18px]">attach_file</span> Photos
+                </button>
+              </td>
+            </tr>
+            <tr v-if="sortedHistory.length === 0">
+              <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                <span class="material-symbols-outlined text-4xl text-gray-300 mb-2 block">history</span>
+                Aucune pièce générée
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+  </div>
   </AppLayout>
+  
+  <VoucherAttachmentModal 
+    :is-open="isAttachmentModalOpen"
+    :voucher-id="selectedVoucherId"
+    type="bank"
+    @close="isAttachmentModalOpen = false"
+  />
 </template>
 
 <script setup>
-import { reactive, computed, onMounted } from 'vue';
+import { reactive, computed, onMounted, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import VoucherAttachmentModal from '@/components/VoucherAttachmentModal.vue';
 import { api } from '@/services/api';
+
+const isAttachmentModalOpen = ref(false);
+const selectedVoucherId = ref(null);
+const isDropdownOpen = ref(false);
+
+const openAttachments = (id) => {
+  selectedVoucherId.value = id;
+  isAttachmentModalOpen.value = true;
+};
+
+const toggleCaisseSelection = (id) => {
+  const index = form.linked_caisse_voucher_ids.indexOf(id);
+  if (index > -1) {
+    form.linked_caisse_voucher_ids.splice(index, 1);
+  } else {
+    form.linked_caisse_voucher_ids.push(id);
+  }
+};
 
 const form = reactive({
   id: null,
@@ -196,8 +358,35 @@ const form = reactive({
   amount_in_letters: '',
   allocations: [
     { cost_center_code: '', cost_center_name: '', client: '', analytical_account: '', amount: 0 }
-  ]
+  ],
+  linked_caisse_voucher_ids: []
 });
+
+const availableCaisseVouchers = ref([]);
+const history = ref([]);
+const searchQuery = ref('');
+const sortColumn = ref('id');
+const sortOrder = ref('desc');
+
+const sortedHistory = computed(() => {
+  return [...history.value].sort((a, b) => {
+    let valA = a[sortColumn.value];
+    let valB = b[sortColumn.value];
+    
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+});
+
+const toggleSort = (col) => {
+  if (sortColumn.value === col) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = col;
+    sortOrder.value = 'desc';
+  }
+};
 
 const updatePeriod = () => {
   const d = new Date(form.date);
@@ -215,9 +404,29 @@ const fetchNextId = async () => {
   }
 };
 
+const fetchCaisseVouchers = async () => {
+  try {
+    const res = await api.get('/caisse/');
+    availableCaisseVouchers.value = res.data;
+  } catch (e) {
+    console.error("Erreur récupération pièces de caisse", e);
+  }
+};
+
+const fetchHistory = async () => {
+  try {
+    const res = await api.get(`/bank-vouchers/?search=${searchQuery.value}`);
+    history.value = res.data;
+  } catch (e) {
+    console.error("Erreur récupération historique", e);
+  }
+};
+
 onMounted(() => {
   updatePeriod();
   fetchNextId();
+  fetchCaisseVouchers();
+  fetchHistory();
 });
 
 const addAllocation = () => {
@@ -245,13 +454,17 @@ const submitVoucher = async () => {
   try {
     const response = await api.post('/bank-vouchers/', form);
     
-    alert('Pièce de banque générée avec succès ! Le PDF est en cours de création.');
-    
     if (response.data && response.data.pdf_url) {
       const url = response.data.pdf_url.startsWith('http') 
         ? response.data.pdf_url 
         : `${api.defaults.baseURL || 'http://localhost:8000'}/${response.data.pdf_url}`;
       window.open(url, '_blank');
+    }
+    
+    // Open the attachment modal for the newly created voucher
+    if (response.data && response.data.id) {
+      selectedVoucherId.value = response.data.id;
+      isAttachmentModalOpen.value = true;
     }
     
     // Reset form for next use
@@ -260,12 +473,14 @@ const submitVoucher = async () => {
     form.description = '';
     form.amount_in_numbers = 0;
     form.amount_in_letters = '';
+    form.linked_caisse_voucher_ids = [];
     form.allocations = [
       { cost_center_code: '', cost_center_name: '', client: '', analytical_account: '', amount: 0 }
     ];
     
     // Fetch next ID for new voucher
     await fetchNextId();
+    await fetchHistory();
   } catch (error) {
     console.error('Erreur :', error);
     if (error.response && error.response.data && error.response.data.detail) {

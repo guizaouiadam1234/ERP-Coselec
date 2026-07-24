@@ -1,9 +1,18 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import or_, cast, String
+
+logger = logging.getLogger(__name__)
+
+
+def _escape_like(value: str) -> str:
+    """Escape LIKE-special characters to prevent wildcard injection."""
+    return value.replace("%", r"\%").replace("_", r"\_")
 
 from app.core.database.session import get_db
 from app.core.security.auth import get_current_user, check_permission
@@ -23,16 +32,23 @@ def list_fuel_requests(
     current_user: User = Depends(check_permission("fuel_requests.read"))
 ):
     query = db.query(FuelRequest).outerjoin(Employee, FuelRequest.employee_id == Employee.id).filter(FuelRequest.is_deleted == False)
+
+    # Row-level security: non-admin/finance/logistics users see only their own requests
+    user_roles = {role.name for role in current_user.roles}
+    if not user_roles & {"Admin", "Finance", "Stock / Logistique", "Direction"}:
+        query = query.filter(FuelRequest.manager_id == current_user.id)
+
     if search:
-        search_term = search.replace("DA-", "")
+        safe_search = _escape_like(search)
+        search_term = _escape_like(search.replace("DA-", ""))
         query = query.filter(
             or_(
                 cast(FuelRequest.id, String).ilike(f"%{search_term}%"),
-                cast(FuelRequest.affaire_no, String).ilike(f"%{search}%"),
-                cast(FuelRequest.dossier_no, String).ilike(f"%{search}%"),
-                cast(FuelRequest.request_date, String).ilike(f"%{search}%"),
-                Employee.first_name.ilike(f"%{search}%"),
-                Employee.last_name.ilike(f"%{search}%")
+                cast(FuelRequest.affaire_no, String).ilike(f"%{safe_search}%"),
+                cast(FuelRequest.dossier_no, String).ilike(f"%{safe_search}%"),
+                cast(FuelRequest.request_date, String).ilike(f"%{safe_search}%"),
+                Employee.first_name.ilike(f"%{safe_search}%"),
+                Employee.last_name.ilike(f"%{safe_search}%")
             )
         )
     requests = query.all()
@@ -64,12 +80,17 @@ def create_fuel_request(
 def delete_fuel_request(
     request_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_permission("fuel_requests.create")) # Assume creator/admin can delete
+    current_user: User = Depends(check_permission("fuel_requests.delete"))
 ):
     req = db.query(FuelRequest).filter(FuelRequest.id == request_id, FuelRequest.is_deleted == False).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-        
+
+    # Ownership check: only the creator or an Admin can delete
+    user_roles = {role.name for role in current_user.roles}
+    if req.manager_id != current_user.id and "Admin" not in user_roles:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this request")
+
     req.is_deleted = True
     db.commit()
     return {"message": "Request deleted successfully"}
@@ -99,8 +120,8 @@ def validate_finance(
             pdf_url = generate_dmcar_pdf(req)
             if pdf_url:
                 req.pdf_url = pdf_url
-        except Exception as e:
-            print(f"Failed to generate PDF: {e}")
+        except Exception:
+            logger.exception("Failed to generate PDF for fuel request %s", request_id)
             
     elif payload.action == "REJECT":
         req.status = FuelRequestStatus.REJECTED

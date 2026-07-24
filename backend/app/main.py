@@ -63,7 +63,7 @@ from app.models.stock.stockmovement import StockMovement
 from app.models.stock.warehouse import Warehouse
 from app.models.notification import NotificationType, Notification
 from app.models.hr.contract import Contract
-from app.modules.requests_unified.models.request import GenericRequest
+from app.modules.requests_unified.models.request import GenericRequest, RequestHistory
 from app.models.hr.document import EmployeeDocument
 from app.modules.requests.models.fuel_request import FuelRequest
 from app.models.project.project import Project
@@ -74,6 +74,7 @@ from app.models.project.budget import ProjectBudget
 from app.models.project.expense import ProjectExpense
 from app.models.hr.attendance import Attendance
 from app.models.bank_voucher import BankVoucher, AnalyticalAllocation
+from app.models.voucher_attachment import VoucherAttachment
 
 from app.services.notification import create_notification
 from app.modules.users.services.rbac import (

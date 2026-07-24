@@ -1,118 +1,336 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+"""
+Unified Requests Router
+=======================
+Handles all request types (HR, IT, Facility, Fuel, etc.) through a single
+polymorphic API. Enforces state machine transitions, row-level security,
+SLA deadlines, and writes immutable audit history.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timedelta
+from typing import Optional
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+
+from app.core.database import get_db, SessionLocal
 from app.core.security.auth import get_current_user, check_permission
 from app.modules.users.models.user import User
-from app.modules.requests_unified.models.request import GenericRequest, RequestStatus, RequestType
-from app.modules.requests_unified.schemas.request import RequestCreate, RequestUpdateStatus, RequestResponse
-from app.modules.requests_unified.services.leave_workflow import process_approved_leave
+from app.modules.requests_unified.models.request import (
+    GenericRequest,
+    RequestHistory,
+    RequestStatus,
+    RequestType,
+    RequestPriority,
+)
+from app.modules.requests_unified.schemas.request import (
+    RequestCreate,
+    RequestUpdateStatus,
+    RequestResponse,
+)
+from app.modules.requests_unified.services.state_machine import (
+    validate_transition,
+    initial_status_for,
+    SLA_HOURS,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/requests", tags=["Requests Unified"])
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _compute_sla_deadline(priority: RequestPriority) -> datetime:
+    hours = SLA_HOURS.get(priority.value, SLA_HOURS["NORMAL"])
+    return datetime.utcnow() + timedelta(hours=hours)
+
+
+def _record_history(
+    db: Session,
+    request: GenericRequest,
+    old_status: str | None,
+    new_status: str,
+    user_id: int,
+    comment: str | None = None,
+) -> None:
+    """Append an immutable audit entry to request_history."""
+    db.add(RequestHistory(
+        request_id=request.id,
+        old_status=old_status,
+        new_status=new_status,
+        changed_by_id=user_id,
+        comment=comment,
+    ))
+
+
+def _user_roles(user: User) -> set[str]:
+    return {role.name for role in user.roles}
+
+
+def _apply_row_level_filter(query, current_user: User):
+    """
+    Enforce row-level security:
+    - Admin sees everything
+    - RH sees LEAVE requests
+    - Finance sees requests pending finance approval
+    - Stock/Logistique/Maintenance sees FACILITY + FUEL
+    - Everyone else sees only their own requests
+    """
+    roles = _user_roles(current_user)
+
+    if "Admin" in roles:
+        return query
+
+    from sqlalchemy import or_
+
+    conditions = []
+
+    # Always allow users to see their own requests
+    conditions.append(GenericRequest.requester_id == current_user.id)
+
+    if roles & {"RH"}:
+        conditions.append(GenericRequest.type == RequestType.LEAVE)
+
+    if roles & {"Finance"}:
+        conditions.append(GenericRequest.type.in_([
+            RequestType.FUEL, RequestType.IT_EQUIPMENT, RequestType.FACILITY_SUPPLIES,
+        ]))
+
+    if roles & {"Stock / Logistique", "Maintenance"}:
+        conditions.append(GenericRequest.type.in_([
+            RequestType.FACILITY_MAINTENANCE,
+            RequestType.FACILITY_SUPPLIES,
+            RequestType.FUEL,
+        ]))
+
+    if roles & {"Direction"}:
+        # Direction can view all but not necessarily act
+        return query
+
+    return query.filter(or_(*conditions))
+
+
+# ---------------------------------------------------------------------------
+# GET /requests/
+# ---------------------------------------------------------------------------
+
 @router.get("/", response_model=list[RequestResponse])
 def get_requests(
-    type: RequestType | None = None,
+    type: Optional[RequestType] = None,
+    status_filter: Optional[RequestStatus] = Query(None, alias="status"),
+    priority: Optional[RequestPriority] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     query = db.query(GenericRequest)
-    
-    # Si l'utilisateur n'est pas un admin/RH, il ne voit que ses propres requêtes
-    # (A adapter selon les rôles exacts de l'application)
-    # Pour l'instant, on suppose que check_permission gèrera ça sur les routes spécifiques,
-    # mais pour une route unifiée, on filtre si l'user n'a pas un rôle spécifique.
-    
-    # TODO: Add proper RBAC filtering here if needed.
-    # For now, let's just return all requests, or filter by type if provided.
+
+    # Row-level security
+    query = _apply_row_level_filter(query, current_user)
+
     if type:
         query = query.filter(GenericRequest.type == type)
-        
-    return query.all()
+    if status_filter:
+        query = query.filter(GenericRequest.status == status_filter)
+    if priority:
+        query = query.filter(GenericRequest.priority == priority)
+
+    return query.order_by(GenericRequest.created_at.desc()).all()
+
+
+# ---------------------------------------------------------------------------
+# GET /requests/{request_id}
+# ---------------------------------------------------------------------------
+
+@router.get("/{request_id}", response_model=RequestResponse)
+def get_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    request = db.get(GenericRequest, request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # Row-level security check: user must own the request or have a qualifying role
+    roles = _user_roles(current_user)
+    if (
+        request.requester_id != current_user.id
+        and "Admin" not in roles
+        and "Direction" not in roles
+        and "RH" not in roles
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized to view this request")
+
+    return request
+
+
+# ---------------------------------------------------------------------------
+# POST /requests/
+# ---------------------------------------------------------------------------
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=RequestResponse)
 def create_request(
     request_data: RequestCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    # L'utilisateur connecté est le demandeur
+    initial = initial_status_for(request_data.type)
+
     new_request = GenericRequest(
         type=request_data.type,
+        status=initial,
+        priority=request_data.priority,
+        category=request_data.category,
         requester_id=current_user.id,
         project_id=request_data.project_id,
         description=request_data.description,
-        payload=jsonable_encoder(request_data.payload)
+        payload=jsonable_encoder(request_data.payload),
+        sla_deadline=_compute_sla_deadline(request_data.priority),
     )
     db.add(new_request)
+    db.flush()
+
+    # Record creation in audit log
+    _record_history(db, new_request, None, initial.value, current_user.id, "Request created")
+
     db.commit()
     db.refresh(new_request)
-    
     return new_request
+
+
+# ---------------------------------------------------------------------------
+# PATCH /requests/{request_id}/status
+# ---------------------------------------------------------------------------
 
 @router.patch("/{request_id}/status", response_model=RequestResponse)
 def update_request_status(
     request_id: int,
     payload: RequestUpdateStatus,
     background_tasks: BackgroundTasks,
-    # On suppose que valider une requête demande une permission spéciale
     current_user: User = Depends(check_permission("requests.validate_hr")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     request = db.get(GenericRequest, request_id)
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
-        
-    if request.status != RequestStatus.PENDING:
-        raise HTTPException(status_code=400, detail="Only PENDING requests can be updated")
-        
+
+    # Enforce state machine
+    if not validate_transition(request.status, payload.status):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid status transition: {request.status.value} → {payload.status.value}. "
+                f"Allowed: {', '.join(s.value for s in __import__('app.modules.requests_unified.services.state_machine', fromlist=['VALID_TRANSITIONS']).VALID_TRANSITIONS.get(request.status, set()))}"
+            ),
+        )
+
+    old_status = request.status.value
     request.status = payload.status
     request.validator_id = current_user.id
+
     if payload.rejection_comment:
         request.rejection_comment = payload.rejection_comment
-        
+
+    # Mark resolution timestamp for terminal states
+    if payload.status in {RequestStatus.COMPLETED, RequestStatus.REJECTED}:
+        request.resolved_at = datetime.utcnow()
+
+    # Record audit history
+    _record_history(
+        db, request, old_status, payload.status.value,
+        current_user.id, payload.rejection_comment,
+    )
+
     db.commit()
     db.refresh(request)
-    
-    # --- Workflows Post-Approbation ---
-    if request.status == RequestStatus.APPROVED:
-        if request.type == RequestType.LEAVE:
-            start_date = request.payload.get("start_date")
-            end_date = request.payload.get("end_date")
-            
-            # Conversion string to date si nécessaire (Pydantic serialize en string dans le dict)
-            from datetime import date
+
+    # --- Post-approval workflows (run asynchronously) ---
+    if request.status == RequestStatus.APPROVED and request.type == RequestType.LEAVE:
+        start_date = request.payload.get("start_date")
+        end_date = request.payload.get("end_date")
+
+        if start_date and end_date:
+            from datetime import date as date_type
             if isinstance(start_date, str):
-                start_date = date.fromisoformat(start_date)
+                start_date = date_type.fromisoformat(start_date)
             if isinstance(end_date, str):
-                end_date = date.fromisoformat(end_date)
-                
-            # Exécution de la création des présences
-            target_employee_id = request.payload.get("employee_id")
-            if not target_employee_id:
-                target_employee_id = request.requester_id
-            
-            background_tasks.add_task(process_approved_leave, db, int(target_employee_id), start_date, end_date)
-            
+                end_date = date_type.fromisoformat(end_date)
+
+            target_employee_id = request.payload.get("employee_id") or request.requester_id
+
+            # Use a NEW session for the background task to avoid session lifecycle issues
+            def _process_leave():
+                with SessionLocal() as bg_db:
+                    try:
+                        from app.modules.requests_unified.services.leave_workflow import process_approved_leave
+                        process_approved_leave(bg_db, int(target_employee_id), start_date, end_date)
+                    except Exception:
+                        logger.exception("Failed to process approved leave for request %s", request_id)
+
+            background_tasks.add_task(_process_leave)
+
     return request
+
+
+# ---------------------------------------------------------------------------
+# DELETE /requests/{request_id}
+# ---------------------------------------------------------------------------
 
 @router.delete("/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_request(
     request_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     request = db.get(GenericRequest, request_id)
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
-        
-    # Un utilisateur ne peut supprimer que ses propres requêtes (ou un admin)
-    if request.requester_id != current_user.id: # TODO: add admin check
+
+    # Ownership check: only the requester or an admin can delete
+    roles = _user_roles(current_user)
+    if request.requester_id != current_user.id and "Admin" not in roles:
         raise HTTPException(status_code=403, detail="Not authorized to delete this request")
-        
-    if request.status != RequestStatus.PENDING:
-        raise HTTPException(status_code=400, detail="Cannot delete a request that is not PENDING")
-        
+
+    # Can only delete non-terminal requests
+    if request.status in {RequestStatus.COMPLETED, RequestStatus.APPROVED}:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a request that is already approved or completed",
+        )
+
     db.delete(request)
     db.commit()
     return None
+
+
+# ---------------------------------------------------------------------------
+# GET /requests/{request_id}/history
+# ---------------------------------------------------------------------------
+
+@router.get("/{request_id}/history")
+def get_request_history(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    request = db.get(GenericRequest, request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    return [
+        {
+            "id": h.id,
+            "old_status": h.old_status,
+            "new_status": h.new_status,
+            "changed_by_id": h.changed_by_id,
+            "comment": h.comment,
+            "created_at": h.created_at,
+        }
+        for h in request.history
+    ]

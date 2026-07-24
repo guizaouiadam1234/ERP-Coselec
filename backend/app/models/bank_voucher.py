@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Enum as SQLEnum, DateTime
+from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, Enum as SQLEnum, DateTime, JSON
 from sqlalchemy.orm import relationship
 from app.models.caisse_voucher import VoucherStatus
 from app.core.database import Base
@@ -22,6 +22,8 @@ class BankVoucher(Base):
     amount_in_letters = Column(String(500), nullable=False)
     
     pdf_url = Column(String(500), nullable=True)
+    
+    linked_caisse_voucher_ids = Column(JSON, default=list)
 
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     expense_id = Column(Integer, ForeignKey("project_expenses.id", ondelete="SET NULL"), nullable=True)
@@ -32,6 +34,7 @@ class BankVoucher(Base):
     reservation = relationship("ProjectStockReservation")
 
     allocations = relationship("AnalyticalAllocation", back_populates="bank_voucher", cascade="all, delete-orphan")
+    attachments = relationship("VoucherAttachment", cascade="all, delete-orphan")
 
 
 class AnalyticalAllocation(Base):

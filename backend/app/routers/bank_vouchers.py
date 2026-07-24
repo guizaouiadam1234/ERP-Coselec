@@ -9,7 +9,10 @@ from app.core.database import get_db
 from app.models.caisse_voucher import CaisseVoucher
 from app.models.bank_voucher import BankVoucher, AnalyticalAllocation
 from app.services.pdf_generator import generate_bank_voucher_pdf
-from app.services.storage import get_file_url_from_minio
+from app.services.storage import get_file_url_from_minio, upload_file_to_minio
+from app.models.voucher_attachment import VoucherAttachment
+from fastapi import UploadFile, File
+import uuid
 
 router = APIRouter(prefix="/bank-vouchers", tags=["Bank Vouchers"])
 
@@ -34,6 +37,7 @@ class BankVoucherCreate(BaseModel):
     project_id: Optional[int] = None
     expense_id: Optional[int] = None
     reservation_id: Optional[int] = None
+    linked_caisse_voucher_ids: List[int] = []
 
 @router.get("/", status_code=status.HTTP_200_OK)
 def get_bank_vouchers(
@@ -92,7 +96,8 @@ def create_bank_voucher(voucher_in: BankVoucherCreate, db: Session = Depends(get
         amount_in_letters=voucher_in.amount_in_letters,
         project_id=voucher_in.project_id,
         expense_id=voucher_in.expense_id,
-        reservation_id=voucher_in.reservation_id
+        reservation_id=voucher_in.reservation_id,
+        linked_caisse_voucher_ids=voucher_in.linked_caisse_voucher_ids
     )
     db.add(db_bank_voucher)
     try:
@@ -156,3 +161,49 @@ def void_bank_voucher(voucher_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(voucher)
     return {"status": voucher.status}
+
+@router.post("/{voucher_id}/attachments")
+def upload_bank_attachment(
+    voucher_id: int, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db)
+):
+    voucher = db.query(BankVoucher).filter(BankVoucher.id == voucher_id).first()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Bank Voucher not found")
+        
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+    filename = f"orders/bank_{voucher_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    
+    try:
+        storage_path = upload_file_to_minio(file, filename)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        
+    attachment = VoucherAttachment(
+        bank_voucher_id=voucher_id,
+        file_name=file.filename,
+        storage_path=storage_path,
+        mime_type=file.content_type
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    
+    url = get_file_url_from_minio(attachment.storage_path)
+    return {"id": attachment.id, "file_name": attachment.file_name, "url": url}
+
+@router.get("/{voucher_id}/attachments")
+def get_bank_attachments(voucher_id: int, db: Session = Depends(get_db)):
+    attachments = db.query(VoucherAttachment).filter(VoucherAttachment.bank_voucher_id == voucher_id).all()
+    results = []
+    for att in attachments:
+        url = get_file_url_from_minio(att.storage_path)
+        results.append({
+            "id": att.id,
+            "file_name": att.file_name,
+            "mime_type": att.mime_type,
+            "url": url,
+            "created_at": att.created_at
+        })
+    return results
